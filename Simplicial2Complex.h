@@ -3,16 +3,16 @@
 #include <unordered_set>
 #include <set>
 #include <stack>
-//#include <ANN/ANN.h>
+// #include <ANN/ANN.h>
 #include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <iomanip>
 #include <unordered_map>
 #include <map>
-//#include "C:\Program Files\MATLAB\R2015b\extern\include\mat.h"
+// #include "C:\Program Files\MATLAB\R2015b\extern\include\mat.h"
 #define DIM 3
-//#define min(a,b) (a <= b)? a : b
+// #define min(a,b) (a <= b)? a : b
 using namespace std;
 
 /*namespace std{
@@ -340,8 +340,8 @@ private:
 
 public:
 	DiscreteVField();
-	bool containsPair(Vertex *v, Edge *e);
-	bool containsPair(Edge *e, Triangle *t);
+	Edge* containsPair(Vertex *v);
+	Triangle* containsPair(Edge *e);
 	void addPair(Vertex *v, Edge *e);
 	void addPair(Edge *e, Triangle *t);
 	void removePair(Vertex *v, Edge *e);
@@ -515,6 +515,7 @@ void Simplicial2Complex::buildComplexFromFile(string pathname) {
 	ifstream file(pathname);
 	int numOfVertices;
 	file >> numOfVertices;
+	cout << "\tReading " << numOfVertices << "vertices" << endl;
 	for (int i = 0; i < numOfVertices; i++) {
 		double coords[DIM];
 		double funcValue;
@@ -526,9 +527,11 @@ void Simplicial2Complex::buildComplexFromFile(string pathname) {
 		int vPosition = this->addVertex(v);
 		v->setVposition(vPosition);
 	}
+	cout << "\tDone." << endl;
 
 	int numOfEdges;
 	file >> numOfEdges;
+	cout << "\tReading " << numOfEdges << "edges" << endl;
 	for (int i = 0; i < numOfEdges; i++) {
 		int vIndex1, vIndex2;
 		file >> vIndex1 >> vIndex2;
@@ -540,9 +543,11 @@ void Simplicial2Complex::buildComplexFromFile(string pathname) {
 		int ePosition = this->addEdge(e);
 		e->setEposition(ePosition);
 	}
-
+	cout << "\tDone." << endl;
+	
 	int numOfTris;
 	file >> numOfTris;
+	cout << "\tReading " << numOfTris << "triangles" << endl;
 	for (int i = 0; i < numOfTris; i++) {
 		int eIndex1, eIndex2, eIndex3;
 		file >> eIndex1 >> eIndex2 >> eIndex3;
@@ -556,7 +561,8 @@ void Simplicial2Complex::buildComplexFromFile(string pathname) {
 		int tPosition = this->addTriangle(t);
 		t->setTposition(tPosition);
 	}
-
+	cout << "\tDone." << endl;
+	
 	file.close();
 }
 
@@ -564,6 +570,7 @@ void Simplicial2Complex::buildComplexFromFile2(string pathname) {
 	ifstream file(pathname);
 	int numOfVertices;
 	file >> numOfVertices;
+	cout << "\tReading " << numOfVertices << "vertices" << endl;
 	for (int i = 0; i < numOfVertices; i++) {
 		double coords[DIM];
 		double funcValue;
@@ -575,9 +582,11 @@ void Simplicial2Complex::buildComplexFromFile2(string pathname) {
 		int vPosition = this->addVertex(v);
 		v->setVposition(vPosition);
 	}
+	cout << "\tDone." << endl;
 
 	int numOfEdges;
 	file >> numOfEdges;
+	cout << "\tReading " << numOfEdges << "edges" << endl;
 	for (int i = 0; i < numOfEdges; i++) {
 		int vIndex1, vIndex2;
 		file >> vIndex1 >> vIndex2;
@@ -589,9 +598,11 @@ void Simplicial2Complex::buildComplexFromFile2(string pathname) {
 		int ePosition = this->addEdge(e);
 		e->setEposition(ePosition);
 	}
-
+	cout << "\tDone." << endl;
+	
 	int numOfTris;
 	file >> numOfTris;
+	cout << "\tReading " << numOfTris << "triangles" << endl;
 	for (int i = 0; i < numOfTris; i++) {
 		int vIndex1, vIndex2, vIndex3;
 		file >> vIndex1 >> vIndex2 >> vIndex3;
@@ -608,7 +619,7 @@ void Simplicial2Complex::buildComplexFromFile2(string pathname) {
 		int tPosition = this->addTriangle(t);
 		t->setTposition(tPosition);
 	}
-
+	cout << "\tDone." << endl;
 	file.close();
 }
 
@@ -616,7 +627,7 @@ void Simplicial2Complex::buildComplexFromFile2(string pathname) {
 void Simplicial2Complex::buildRipsComplex(double radius, double eps){
 	this->edgeList.clear();
 	this->triList.clear();
-	
+
 	//Build kd-tree
 	int numOfVertices = this->vertexList.size();
 	ANNpointArray data = annAllocPts(numOfVertices, DIM);
@@ -683,7 +694,7 @@ void Simplicial2Complex::buildRipsComplex(double radius, double eps){
 //void Simplicial2Complex::buildComplexDiscrete(string distPathname, string funcPathname, double radius) {
 //	const char *distPname = distPathname.c_str();
 //	const char *funcPname = funcPathname.c_str();
-//	
+//
 //	MATFile *kdeFile = matOpen(funcPname, "r");
 //	mxArray *kdeValues = matGetVariable(kdeFile, "data");
 //	int numOfVertices = (int)mxGetN(kdeValues);
@@ -728,10 +739,11 @@ void Simplicial2Complex::buildRipsComplex(double radius, double eps){
 //	}
 //
 //	mxDestroyArray(dists);
-//	
+//
 //}
 
 void Simplicial2Complex::buildPsuedoMorseFunction(){
+	cout << "\t Processing edges\n";
 	for (unsigned int i = 0; i < this->edgeList.size(); i++){
 		Edge *e = this->edgeList.at(i);
 		tuple<Vertex*, Vertex*> vertices = e->getVertices();
@@ -744,6 +756,8 @@ void Simplicial2Complex::buildPsuedoMorseFunction(){
 		e->setFuncValue(max->getFuncValue());
 		e->setSymPerturb(total);
 	}
+	
+	cout << "\t Processing triangles\n";
 	for (unsigned int i = 0; i < this->triList.size(); i++){
 		Triangle *t = this->triList.at(i);
 		tuple<Edge*, Edge*, Edge*> edges = t->getEdges();
@@ -792,7 +806,7 @@ void Simplicial2Complex::cancel0PersistencePairs(){
 			this->criticalSet.erase((Simplex*)e);
 		}
 	}
-	
+
 	//Now do edges and triangles
 	for (int i = 0; (unsigned)i < this->triList.size(); i++){
 		Triangle *t = this->triList.at(i);
@@ -889,7 +903,7 @@ void Simplicial2Complex::cancel0PersistencePairs2(){
 	for (vector<Triangle*>::iterator it = this->triList.begin(); it != this->triList.end(); it++){
 		Triangle *t = *it;
 		tuple<Edge*, Edge*, Edge*> edges = t->getEdges();
-		if (!(this->V->containsPair(get<0>(edges), t) || this->V->containsPair(get<1>(edges), t) || this->V->containsPair(get<2>(edges), t))){
+		if (!((this->V->containsPair(get<0>(edges))==t) || (this->V->containsPair(get<1>(edges))==t) || (this->V->containsPair(get<2>(edges))==t))){
 			/*Then t is not in any pair in V, so it is critical*/
 			this->criticalSet.insert((Simplex*)t);
 		}
@@ -921,7 +935,7 @@ set<Simplex*>* Simplicial2Complex::descendingManifold(Simplex* s){
 				/*If it's a vertex, look at all incident edges and see where you can go. There'll be at most one direction*/
 				Vertex *vertex = (Vertex*)simplex;
 				for (vector<Edge*>::iterator it = vertex->begin(); it != vertex->end(); it++){
-					if (this->V->containsPair(vertex, *it)){
+					if (this->V->containsPair(vertex) == *it){
 						manifold->insert(*it);
 						st->push(*it);
 						break;
@@ -934,7 +948,7 @@ set<Simplex*>* Simplicial2Complex::descendingManifold(Simplex* s){
 				Vertex *vert1 = get<0>(edge->getVertices());
 				Vertex *vert2 = get<1>(edge->getVertices());
 				Vertex *exitVert = vert1;
-				if (!this->V->containsPair(vert2, edge)){
+				if (!(this->V->containsPair(vert2) == edge)){
 					exitVert = vert2;
 				}
 				manifold->insert((Simplex*)exitVert);
@@ -966,7 +980,7 @@ set<Simplex*>* Simplicial2Complex::descendingManifold(Simplex* s){
 				/*If it's a vertex, look at all incident edges and see where you can go. There'll be at most one direction*/
 				Vertex *vertex = (Vertex*)simplex;
 				for (vector<Edge*>::iterator it = vertex->begin(); it != vertex->end(); it++){
-					if (this->V->containsPair(vertex, *it)){
+					if (this->V->containsPair(vertex) == *it){
 						manifold->insert(*it);
 						st->push(*it);
 						break;
@@ -978,18 +992,18 @@ set<Simplex*>* Simplicial2Complex::descendingManifold(Simplex* s){
 				Edge *edge = (Edge*)simplex;
 				Vertex *vert1 = get<0>(edge->getVertices());
 				Vertex *vert2 = get<1>(edge->getVertices());
-				if (!this->V->containsPair(vert1, edge)){
+				if (!(this->V->containsPair(vert1) == edge)){
 					manifold->insert((Simplex*)vert1);
 					st->push((Simplex*)vert1);
 				}
-				if (!this->V->containsPair(vert2, edge)){
+				if (!(this->V->containsPair(vert2) == edge)){
 					manifold->insert((Simplex*)vert2);
 					st->push((Simplex*)vert2);
 				}
 
 				for (vector<Triangle*>::iterator it = edge->begin(); it != edge->end(); it++){
 					Triangle *tri = *it;
-					if (this->V->containsPair(edge, tri)){
+					if (this->V->containsPair(edge) == tri){
 						manifold->insert((Simplex*)tri);
 						st->push((Simplex*)tri);
 						break;
@@ -1004,11 +1018,11 @@ set<Simplex*>* Simplicial2Complex::descendingManifold(Simplex* s){
 				Edge *edge3 = get<2>(tri->getEdges());
 
 				Edge *exitEdge1, *exitEdge2;
-				if (this->V->containsPair(edge1, tri)){
+				if (this->V->containsPair(edge1) == tri){
 					exitEdge1 = edge2;
 					exitEdge2 = edge3;
 				}
-				else if (this->V->containsPair(edge2, tri)){
+				else if (this->V->containsPair(edge2) == tri){
 					exitEdge1 = edge1;
 					exitEdge2 = edge3;
 				}
@@ -1324,22 +1338,18 @@ DiscreteVField::DiscreteVField(){
 	this->ETmap = new unordered_map<Edge*, Triangle*>();
 }
 
-bool DiscreteVField::containsPair(Vertex *v, Edge *e){
+Edge* DiscreteVField::containsPair(Vertex *v){
 	if (this->VEmap->count(v) == 1){
-		if (this->VEmap->at(v) == e){
-			return true;
-		}
+		return this->VEmap->at(v);
 	}
-	return false;
+	return NULL;
 }
 
-bool DiscreteVField::containsPair(Edge *e, Triangle *t){
+Triangle* DiscreteVField::containsPair(Edge *e){
 	if (this->ETmap->count(e) == 1){
-		if (this->ETmap->at(e) == t){
-			return true;
-		}
+			return this->ETmap->at(e);
 	}
-	return false;
+	return NULL;
 }
 
 void DiscreteVField::addPair(Vertex *v, Edge *e){
@@ -1353,10 +1363,16 @@ void DiscreteVField::addPair(Edge *e, Triangle *t){
 }
 
 void DiscreteVField::removePair(Vertex *v, Edge *e){
+	if (this->containsPair(v) != e){
+		cerr << "Removing unexisting pair" <<endl;
+	}
 	this->VEmap->erase(v);
 }
 
 void DiscreteVField::removePair(Edge *e, Triangle *t){
+	if (this->containsPair(e) != t){
+		cerr << "Removing unexisting pair" <<endl;
+	}
 	this->ETmap->erase(e);
 }
 
