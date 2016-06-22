@@ -11,7 +11,7 @@
 #include <unordered_map>
 #include <map>
 // #include "C:\Program Files\MATLAB\R2015b\extern\include\mat.h"
-#define DIM 3
+#define DIM 2
 // #define min(a,b) (a <= b)? a : b
 using namespace std;
 
@@ -115,6 +115,7 @@ public:
 	Triangle* getTriangle(int position);
 	void addCriticalPoint(Simplex *s);
 	void removeCriticalPoint(Simplex *s);
+	bool isCritical(Simplex *s);
 	void setDiscreteVField(DiscreteVField *V);
 	int order();
 	void buildRipsComplex(double radius, double eps);
@@ -337,17 +338,23 @@ class DiscreteVField{
 private:
 	unordered_map<Vertex*, Edge*> *VEmap;
 	unordered_map<Edge*, Triangle*> *ETmap;
+	unordered_set<Edge*> *Eflag;
+	unordered_map<Simplex*, vector<Simplex*>* > *jumpmap;
 
 public:
 	DiscreteVField();
 	Edge* containsPair(Vertex *v);
 	Triangle* containsPair(Edge *e);
+	bool containsEdge(Edge *e);
 	void addPair(Vertex *v, Edge *e);
 	void addPair(Edge *e, Triangle *t);
 	void removePair(Vertex *v, Edge *e);
 	void removePair(Edge *e, Triangle *t);
 	void outputVEmap();
 	void outputETmap();
+	bool CanJump(Simplex*);
+	void UnWarp(Simplex* s, bool flip, vector<Simplex*>* path);
+	void addJump(Simplex*, vector<Simplex*>*);
 };
 
 Simplicial2Complex::Simplicial2Complex(){
@@ -410,6 +417,10 @@ void Simplicial2Complex::removeCriticalPoint(Simplex *s){
 	this->criticalSet.erase(s);
 }
 
+bool Simplicial2Complex::isCritical(Simplex *s){
+	return (this->criticalSet.count(s) == 1);
+}
+
 void Simplicial2Complex::setDiscreteVField(DiscreteVField *V){
 	this->V = V;
 }
@@ -460,6 +471,7 @@ void Simplicial2Complex::outputArcs(string vertexFile, string edgeFile){
 	ofstream vFile(vertexFile);
 	ofstream eFile(edgeFile);
 	set<Simplex*> manifolds;
+	cout<< "Writing 1-stable manifold\n";
 	for(unordered_set<Simplex*>::iterator it = this->cBegin(); it != this->cEnd(); it++){
 		Simplex *s = *it;
 		if(s->dim == 1){
@@ -544,7 +556,7 @@ void Simplicial2Complex::buildComplexFromFile(string pathname) {
 		e->setEposition(ePosition);
 	}
 	cout << "\tDone." << endl;
-	
+
 	int numOfTris;
 	file >> numOfTris;
 	cout << "\tReading " << numOfTris << "triangles" << endl;
@@ -562,7 +574,7 @@ void Simplicial2Complex::buildComplexFromFile(string pathname) {
 		t->setTposition(tPosition);
 	}
 	cout << "\tDone." << endl;
-	
+
 	file.close();
 }
 
@@ -599,7 +611,7 @@ void Simplicial2Complex::buildComplexFromFile2(string pathname) {
 		e->setEposition(ePosition);
 	}
 	cout << "\tDone." << endl;
-	
+
 	int numOfTris;
 	file >> numOfTris;
 	cout << "\tReading " << numOfTris << "triangles" << endl;
@@ -756,7 +768,7 @@ void Simplicial2Complex::buildPsuedoMorseFunction(){
 		e->setFuncValue(max->getFuncValue());
 		e->setSymPerturb(total);
 	}
-	
+
 	cout << "\t Processing triangles\n";
 	for (unsigned int i = 0; i < this->triList.size(); i++){
 		Triangle *t = this->triList.at(i);
@@ -911,6 +923,7 @@ void Simplicial2Complex::cancel0PersistencePairs2(){
 }
 
 set<Simplex*>* Simplicial2Complex::descendingManifold(Simplex* s){
+	// Discrete Vector Field: V exist here
 	set<Simplex*> *manifold;
 	/*If s is a minimum, the only simplex in the decending manifold is s itself*/
 	if (s->dim == 0){
@@ -932,18 +945,24 @@ set<Simplex*>* Simplicial2Complex::descendingManifold(Simplex* s){
 			st->pop();
 			/*simplex could either be an edge or a vertex*/
 			if (simplex->dim == 0){
+				Vertex *vert = (Vertex*)simplex;
+				Edge* paired_edge = V->containsPair(vert);
 				/*If it's a vertex, look at all incident edges and see where you can go. There'll be at most one direction*/
-				Vertex *vertex = (Vertex*)simplex;
-				for (vector<Edge*>::iterator it = vertex->begin(); it != vertex->end(); it++){
-					if (this->V->containsPair(vertex) == *it){
-						manifold->insert(*it);
-						st->push(*it);
-						break;
-					}
+				if (paired_edge!=NULL){
+					manifold->insert((Simplex*) paired_edge);
+					st->push((Simplex*) paired_edge);
 				}
 			}
 			else{
 				/*An edge can only be entered from a vertex, so that uses up its arrow, and it can only leave via the other vertex*/
+				/*if (V->CanJump(simplex)){
+					vector<Simplex*>* path = new vector<Simplex*>();
+					V->UnWarp(simplex, true, path);
+					// insert all simplex to manifold;
+					for(int s_index = 0; s_index < (path->size()); s_index++){
+						manifold->insert((*path)[s_index]);
+					}
+				}*/
 				Edge *edge = (Edge*)simplex;
 				Vertex *vert1 = get<0>(edge->getVertices());
 				Vertex *vert2 = get<1>(edge->getVertices());
@@ -959,6 +978,7 @@ set<Simplex*>* Simplicial2Complex::descendingManifold(Simplex* s){
 		delete st;
 	}
 	else{
+		cout<<"we shouldn't be here now, SOMETHIING IS WRONG"<<endl;
 		manifold = new set<Simplex*>({ s });
 		stack<Simplex*> *st = new stack<Simplex*>();
 		Triangle *t = (Triangle*)s;
@@ -1336,6 +1356,56 @@ void Triangle::setTposition(int p){
 DiscreteVField::DiscreteVField(){
 	this->VEmap = new unordered_map<Vertex*, Edge*>();
 	this->ETmap = new unordered_map<Edge*, Triangle*>();
+	this->Eflag = new unordered_set<Edge*>();
+	this->jumpmap = new unordered_map<Simplex*, vector<Simplex*>*>();
+}
+
+bool DiscreteVField::CanJump(Simplex* s){
+	if (this->jumpmap->count(s) == 1) return true;
+	else return false;
+}
+
+void DiscreteVField::UnWarp(Simplex* s, bool flip, vector<Simplex*>* path){
+	vector<Simplex*>* compressed_path = jumpmap->at(s);
+	if (flip){
+		for(vector<Simplex*>::reverse_iterator it = compressed_path->rbegin(); it != compressed_path->rend(); ++it){
+			if (*it == s){
+				// this should happen at the end.
+				path->push_back(*it);
+				continue;
+			}
+			if (this->CanJump(*it)){
+				// order might not matter
+				this->UnWarp(*it, !flip, path);
+			}else{
+				path->push_back(*it);
+			}
+		}
+	}else{
+		for(vector<Simplex*>::iterator it = compressed_path->begin(); it != compressed_path->end(); ++it){
+			if (*it == s){
+				// this should happen at the beginning.
+				path->push_back(*it);
+				continue;
+			}
+			if (this->CanJump(*it)){
+				this->UnWarp(*it, !flip, path);
+			}else{
+				path->push_back(*it);
+			}
+		}
+	}
+}
+void DiscreteVField::addJump(Simplex* s, vector<Simplex*>* jp){
+	std::pair<Simplex*, vector<Simplex*>*> pair = std::make_pair(s, jp);
+	this->jumpmap->insert(pair);
+}
+
+bool DiscreteVField::containsEdge(Edge *e){
+	if (this->Eflag->count(e) == 1)
+		return true;
+	else
+		return false;
 }
 
 Edge* DiscreteVField::containsPair(Vertex *v){
@@ -1355,6 +1425,7 @@ Triangle* DiscreteVField::containsPair(Edge *e){
 void DiscreteVField::addPair(Vertex *v, Edge *e){
 	std::pair<Vertex*, Edge*> pair = std::make_pair(v, e);
 	this->VEmap->insert(pair);
+	this->Eflag->insert(e);
 }
 
 void DiscreteVField::addPair(Edge *e, Triangle *t){
@@ -1367,6 +1438,7 @@ void DiscreteVField::removePair(Vertex *v, Edge *e){
 		cerr << "Removing unexisting pair" <<endl;
 	}
 	this->VEmap->erase(v);
+	this->Eflag->erase(e);
 }
 
 void DiscreteVField::removePair(Edge *e, Triangle *t){

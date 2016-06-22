@@ -19,11 +19,16 @@ int main(int argc, char* argv[]){
 // Input: Simplicial complex - vertex list / edge list / triangle list
 // Output: A graph - vertex list / edge list
 //
-
+    if (argc == 1){
+        argv[1] = "gridcomplex.txt";
+        argv[2] = "outvert2D.txt";
+        argv[3] = "outedge2D.txt";
+        argv[4] = "200";
+    }
 	Simplicial2Complex K;
-	
+
 	cout << "Reading in simplicial complex...\n";
-	K.buildComplexFromFile(argv[1]); //<<<<<<<<<<< Change this if necessary [File: Triangle defined by edge][File2: by vertex]
+	K.buildComplexFromFile2(argv[1]); //<<<<<<<<<<< Change this if necessary [File: Triangle defined by edge][File2: by vertex]
 	//K.outputComplex("testcomplex0.txt");
 	cout << "Done\n";
 

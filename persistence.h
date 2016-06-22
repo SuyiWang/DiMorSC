@@ -652,7 +652,6 @@ vector<Simplex*>* PersistencePairs::isCancellable(const persistencePair12& pp, o
 				exitEdge1 = e1;
 				exitEdge2 = e2;
 			}
-
 			for (int i = 0; i < paths.size(); i++){
 				vector<Simplex*> *path = paths[i];
 				/*The path branches into two paths, so we need to make a copy of the path for the second branch*/
@@ -731,8 +730,10 @@ void PersistencePairs::cancelAlongVPath(vector<Simplex*>* VPath){
 	}*/
 
 	if (VPath->at(0)->dim == 1){
+		vector<Simplex*> * jp = new vector<Simplex*>();
 		for (int i = 0; i < VPath->size(); i++){
 			Simplex *s = VPath->at(i);
+			jp->push_back(s);
 			if (s->dim == 0){
 				Vertex *v = (Vertex*)s;
 				if (i < VPath->size() - 1){
@@ -743,10 +744,14 @@ void PersistencePairs::cancelAlongVPath(vector<Simplex*>* VPath){
 				}
 			}
 		}
+		//V->addPair((Vertex*)(jp->back()), (Edge*)(jp->front()));
+		//V->addJump(jp->front(), jp);
 	}
 	else if (VPath->at(0)->dim == 2){
+		vector<Simplex*> * jp = new vector<Simplex*>();
 		for (int i = 0; i < VPath->size(); i++){
 			Simplex *s = VPath->at(i);
+			jp->push_back(s);
 			if (s->dim == 1){
 				Edge *e = (Edge*)s;
 				if (i < VPath->size() - 1){
@@ -925,7 +930,9 @@ void PersistencePairs::cancelPersistencePairs(double delta){
 		//}
 	}
 	
-	cout << "One of the pairs is used up \n";
+	cout << "msPair: " << i << "/" << msPersistencePairs.size() <<endl;
+	cout << "smPair: " << j << "/" << smPersistencePairs.size() <<endl;
+	
 	if (i < msPersistencePairs.size()){
 		while (i < msPersistencePairs.size()){
 			persistencePair01 pair = msPersistencePairs[i];
@@ -945,7 +952,7 @@ void PersistencePairs::cancelPersistencePairs(double delta){
 				}
 			}
 			i++;
-			if (DEBUG && i % 1000 == 0){
+			if (DEBUG && i % 10 == 0){
 				cout << "\r";
 				cout << "\t" << i << "/" << msPersistencePairs.size() <<endl;
 			}
@@ -971,7 +978,7 @@ void PersistencePairs::cancelPersistencePairs(double delta){
 			}
 			
 			j++;
-			if (DEBUG && j % 1000 == 0){
+			if (DEBUG && j % 10 == 0){
 				cout << "\r";
 				cout << "\t" << j << "/" << smPersistencePairs.size() <<endl;
 			}
@@ -995,8 +1002,9 @@ void PersistencePairs::cancelPersistencePairs(double delta){
 	//cout << "average time to determine cancellability: " << average4 << "s\n";
 
 	cout << "\tOutputting discrete gradient vector field...\n";
-	V->outputVEmap();
-	V->outputETmap();
+	// might need put this back
+	// V->outputVEmap();
+	// V->outputETmap();
 
 	/*Edge *topEdge = msPersistencePairs[msPersistencePairs.size() * 2 / 3].saddle;
 	set<Simplex*> *descMan = this->K->descendingManifold(topEdge);
