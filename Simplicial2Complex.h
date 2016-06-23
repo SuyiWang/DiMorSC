@@ -81,6 +81,9 @@ public:
 	double funcValue;
 	static bool simplexPointerCompare(const Simplex* s, const Simplex* t);
 	unsigned int filtrationPosition;
+	Simplex* prev = NULL;
+	int ID;
+	void assignN(int N){ID = N;}
 };
 
 class Simplicial2Complex{
@@ -211,6 +214,9 @@ public:
 			return false;
 		}
 	}
+	void output(){
+	    cout<< this->funcValue << "\t";
+	}
 };
 
 class Edge:public Simplex{
@@ -274,6 +280,9 @@ public:
 			return false;
 		}
 	}
+	void output(){
+	    cout<< get<0>(vertices)->funcValue << " " << get<1>(vertices)->funcValue << "\t";
+	}
 };
 
 class Triangle:public Simplex{
@@ -331,6 +340,9 @@ public:
 		else{
 			return false;
 		}
+	}
+	void output(){
+	    cout<< get<0>(vertices)->funcValue << " " << get<1>(vertices)->funcValue << " " << get<2>(vertices)->funcValue << "\t";
 	}
 };
 
@@ -528,6 +540,7 @@ void Simplicial2Complex::buildComplexFromFile(string pathname) {
 	int numOfVertices;
 	file >> numOfVertices;
 	cout << "\tReading " << numOfVertices << "vertices" << endl;
+	int counter = 0;
 	for (int i = 0; i < numOfVertices; i++) {
 		double coords[DIM];
 		double funcValue;
@@ -536,8 +549,10 @@ void Simplicial2Complex::buildComplexFromFile(string pathname) {
 		}
 		file >> funcValue;
 		Vertex *v = new Vertex(coords, funcValue);
+		v->assignN(counter);
 		int vPosition = this->addVertex(v);
 		v->setVposition(vPosition);
+		counter++;
 	}
 	cout << "\tDone." << endl;
 
@@ -550,10 +565,12 @@ void Simplicial2Complex::buildComplexFromFile(string pathname) {
 		Vertex *v1 = this->getVertex(vIndex1);
 		Vertex *v2 = this->getVertex(vIndex2);
 		Edge *e = new Edge(v1, v2);
+		e->assignN(counter);
 		v1->addEdge(e);
 		v2->addEdge(e);
 		int ePosition = this->addEdge(e);
 		e->setEposition(ePosition);
+		counter++;
 	}
 	cout << "\tDone." << endl;
 
@@ -567,6 +584,8 @@ void Simplicial2Complex::buildComplexFromFile(string pathname) {
 		Edge *e2 = this->getEdge(eIndex2);
 		Edge *e3 = this->getEdge(eIndex3);
 		Triangle *t = new Triangle(e1, e2, e3);
+		t->assignN(counter);
+		counter++;
 		e1->addTriangle(t);
 		e2->addTriangle(t);
 		e3->addTriangle(t);
@@ -583,6 +602,8 @@ void Simplicial2Complex::buildComplexFromFile2(string pathname) {
 	int numOfVertices;
 	file >> numOfVertices;
 	cout << "\tReading " << numOfVertices << "vertices" << endl;
+	int counter = 0;
+
 	for (int i = 0; i < numOfVertices; i++) {
 		double coords[DIM];
 		double funcValue;
@@ -591,8 +612,10 @@ void Simplicial2Complex::buildComplexFromFile2(string pathname) {
 		}
 		file >> funcValue;
 		Vertex *v = new Vertex(coords, funcValue);
+		v->assignN(counter);
 		int vPosition = this->addVertex(v);
 		v->setVposition(vPosition);
+		counter++;
 	}
 	cout << "\tDone." << endl;
 
@@ -605,10 +628,12 @@ void Simplicial2Complex::buildComplexFromFile2(string pathname) {
 		Vertex *v1 = this->getVertex(vIndex1);
 		Vertex *v2 = this->getVertex(vIndex2);
 		Edge *e = new Edge(v1, v2);
+		e->assignN(counter);
 		v1->addEdge(e);
 		v2->addEdge(e);
 		int ePosition = this->addEdge(e);
 		e->setEposition(ePosition);
+		counter++;
 	}
 	cout << "\tDone." << endl;
 
@@ -622,6 +647,7 @@ void Simplicial2Complex::buildComplexFromFile2(string pathname) {
 		Vertex *v2 = this->getVertex(vIndex2);
 		Vertex *v3 = this->getVertex(vIndex3);
 		Triangle *t = new Triangle(v1, v2, v3);
+		t->assignN(counter);
 		Edge *e1 = get<0>(t->getEdges());
 		Edge *e2 = get<1>(t->getEdges());
 		Edge *e3 = get<2>(t->getEdges());
@@ -630,6 +656,7 @@ void Simplicial2Complex::buildComplexFromFile2(string pathname) {
 		e3->addTriangle(t);
 		int tPosition = this->addTriangle(t);
 		t->setTposition(tPosition);
+		counter ++;
 	}
 	cout << "\tDone." << endl;
 	file.close();
@@ -767,6 +794,8 @@ void Simplicial2Complex::buildPsuedoMorseFunction(){
 		}
 		e->setFuncValue(max->getFuncValue());
 		e->setSymPerturb(total);
+		//e->output();
+		//cout<<"E: "<< max->getFuncValue() << " " << total << endl;
 	}
 
 	cout << "\t Processing triangles\n";
@@ -785,6 +814,8 @@ void Simplicial2Complex::buildPsuedoMorseFunction(){
 			max = e3;
 		}
 		t->setFuncValue(max->getFuncValue());
+		//t->output();
+		//cout<<"T: "<<max->getFuncValue()<<" "<<max->getSymPerturb()<<" "<< total<<endl;
 		t->setSymPerturb(max->getSymPerturb(), total);
 	}
 }

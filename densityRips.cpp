@@ -20,15 +20,16 @@ int main(int argc, char* argv[]){
 // Output: A graph - vertex list / edge list
 //
     if (argc == 1){
-        argv[1] = "gridcomplex.txt";
-        argv[2] = "outvert2D.txt";
-        argv[3] = "outedge2D.txt";
-        argv[4] = "200";
+        argv[1] = "testComplex.txt";
+        argv[2] = "outvert2d.txt";
+        argv[3] = "outedge2d.txt";
+        argv[4] = "24";
     }
 	Simplicial2Complex K;
 
 	cout << "Reading in simplicial complex...\n";
-	K.buildComplexFromFile2(argv[1]); //<<<<<<<<<<< Change this if necessary [File: Triangle defined by edge][File2: by vertex]
+	// 2D defined by edge. 3D defined by vertex.
+	K.buildComplexFromFile(argv[1]); //<<<<<<<<<<< Change this if necessary [File: Triangle defined by edge][File2: by vertex]
 	//K.outputComplex("testcomplex0.txt");
 	cout << "Done\n";
 
@@ -44,7 +45,6 @@ int main(int argc, char* argv[]){
 	P.buildFiltration();
 	cout << "Done\n";
 
-	/*
 	ofstream filtration("filtration.txt", ios_base::out | ios_base::trunc);
 	filtration << setprecision(16);
 	for (vector<Simplex*>::iterator it = P.filtration.begin(); it != P.filtration.end(); it++){
@@ -60,16 +60,16 @@ int main(int argc, char* argv[]){
 		}
 	}
 	filtration.close();
-	*/
+
 
 
 	cout << "Computing persistence pairs...\n";
 	P.computePersistencePairsWithClear();
 	cout << "Done!\n";
 
-	/*cout << "Outputing persistence pairs...\n";
+	cout << "Outputing persistence pairs...\n";
 	P.outputPersistencePairs("persistencePairs.txt");
-	cout << "Done\n";*/
+	cout << "Done\n";
 
 	cout << "Cancelling persistence pairs...\n";
 	P.cancelPersistencePairs(atof(argv[4]));
