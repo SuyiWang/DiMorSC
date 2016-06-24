@@ -1524,7 +1524,7 @@ bool Simplex::simplexPointerCompare(const Simplex *s, const Simplex *t){
 	if (s->funcValue < t->funcValue){
 		return true;
 	}
-	else if (s->funcValue == t->funcValue){
+	else if (fabs(s->funcValue - t->funcValue) < 1e-8){
 		//By dimension
 		if (s->dim < t->dim){
 			return true;
@@ -1540,7 +1540,7 @@ bool Simplex::simplexPointerCompare(const Simplex *s, const Simplex *t){
 				if (((Edge*)s)->getSymPerturb() < ((Edge*)t)->getSymPerturb()){
 					return true;
 				}
-				else if (((Edge*)s)->getSymPerturb() == ((Edge*)t)->getSymPerturb()){
+				else if (fabs(((Edge*)s)->getSymPerturb() - ((Edge*)t)->getSymPerturb()) < 1e-8){
 					//by ePosition
 					return ((Edge*)s)->getEPosition() < ((Edge*)t)->getEPosition();
 				}
@@ -1553,12 +1553,12 @@ bool Simplex::simplexPointerCompare(const Simplex *s, const Simplex *t){
 				if (get<0>(((Triangle*)s)->getSymPerturb()) < get<0>(((Triangle*)t)->getSymPerturb())){
 					return true;
 				}
-				else if (get<0>(((Triangle*)s)->getSymPerturb()) == get<0>(((Triangle*)t)->getSymPerturb())){
+				else if (fabs(get<0>(((Triangle*)s)->getSymPerturb()) - get<0>(((Triangle*)t)->getSymPerturb())) < 1e-8){
 					//by second-order symbolic perturbation
 					if (get<1>(((Triangle*)s)->getSymPerturb()) < get<1>(((Triangle*)t)->getSymPerturb())){
 						return true;
 					}
-					else if (get<1>(((Triangle*)s)->getSymPerturb()) == get<1>(((Triangle*)t)->getSymPerturb())){
+					else if (fabs(get<1>(((Triangle*)s)->getSymPerturb()) - get<1>(((Triangle*)t)->getSymPerturb())) < 1e-8){
 						//by tPosition
 						return ((Triangle*)s)->getTPosition() < ((Triangle*)t)->getTPosition();
 					}

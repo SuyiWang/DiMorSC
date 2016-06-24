@@ -20,7 +20,7 @@ int main(int argc, char* argv[]){
 // Output: A graph - vertex list / edge list
 //
     if (argc == 1){
-        argv[1] = "testComplex.txt";
+        argv[1] = "testComplex_ms.txt";
         argv[2] = "outvert2d.txt";
         argv[3] = "outedge2d.txt";
         argv[4] = "24";
