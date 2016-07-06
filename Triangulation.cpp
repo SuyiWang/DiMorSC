@@ -225,7 +225,7 @@ int triangle_cube(int i, int j, int k, int AB, TriangleHash &th, EdgeHash &eh){
                 if (rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]] <= 0){
                     rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]] = vertcount++;
                     point p;
-                    p.x = i+TypeAtri[cnt*3][0]; p.y = j+TypeAtri[cnt*3][1]; p.z = k+TypeAtri[cnt*3][2]; p.v = 0;
+                    p.x = i+TypeAtri[cnt*3][0]; p.y = j+TypeAtri[cnt*3][1]; p.z = k+TypeAtri[cnt*3][2]; p.v = 1e-6;
                     vertex.push_back(p);
                     sub1 = rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]];
                 }
@@ -236,7 +236,7 @@ int triangle_cube(int i, int j, int k, int AB, TriangleHash &th, EdgeHash &eh){
                 if (rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]] <= 0){
                     rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]] = vertcount++;
                     point p;
-                    p.x = i+TypeAtri[cnt*3+1][0]; p.y = j+TypeAtri[cnt*3+1][1]; p.z = k+TypeAtri[cnt*3+1][2]; p.v = 0;
+                    p.x = i+TypeAtri[cnt*3+1][0]; p.y = j+TypeAtri[cnt*3+1][1]; p.z = k+TypeAtri[cnt*3+1][2]; p.v = 1e-6;
                     vertex.push_back(p);
                     sub2 = rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]];
                 }
@@ -247,7 +247,7 @@ int triangle_cube(int i, int j, int k, int AB, TriangleHash &th, EdgeHash &eh){
                 if (rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]]<=0){
                     rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]] = vertcount++;
                     point p;
-                    p.x = i+TypeAtri[cnt*3+2][0]; p.y = j+TypeAtri[cnt*3+2][1]; p.z = k+TypeAtri[cnt*3+2][2]; p.v = 0;
+                    p.x = i+TypeAtri[cnt*3+2][0]; p.y = j+TypeAtri[cnt*3+2][1]; p.z = k+TypeAtri[cnt*3+2][2]; p.v = 1e-6;
                     vertex.push_back(p);
                     sub3 = rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]];
                 }
@@ -331,7 +331,7 @@ int triangle_cube(int i, int j, int k, int AB, TriangleHash &th, EdgeHash &eh){
                 if (rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]] <= 0){
                     rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]] = vertcount++;
                     point p;
-                    p.x = i+TypeAtri[cnt*3][0]; p.y = j+TypeAtri[cnt*3][1]; p.z = k+TypeAtri[cnt*3][2]; p.v = 0;
+                    p.x = i+TypeAtri[cnt*3][0]; p.y = j+TypeAtri[cnt*3][1]; p.z = k+TypeAtri[cnt*3][2]; p.v = 1e-6;
                     vertex.push_back(p);
                     sub1 = rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]];
                 }
@@ -342,7 +342,7 @@ int triangle_cube(int i, int j, int k, int AB, TriangleHash &th, EdgeHash &eh){
                 if (rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]] <= 0){
                     rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]] = vertcount++;
                     point p;
-                    p.x = i+TypeAtri[cnt*3+1][0]; p.y = j+TypeAtri[cnt*3+1][1]; p.z = k+TypeAtri[cnt*3+1][2]; p.v = 0;
+                    p.x = i+TypeAtri[cnt*3+1][0]; p.y = j+TypeAtri[cnt*3+1][1]; p.z = k+TypeAtri[cnt*3+1][2]; p.v = 1e-6;
                     vertex.push_back(p);
                     sub2 = rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]];
                 }
@@ -353,7 +353,7 @@ int triangle_cube(int i, int j, int k, int AB, TriangleHash &th, EdgeHash &eh){
                 if (rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]]<=0){
                     rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]] = vertcount++;
                     point p;
-                    p.x = i+TypeAtri[cnt*3+2][0]; p.y = j+TypeAtri[cnt*3+2][1]; p.z = k+TypeAtri[cnt*3+2][2]; p.v = 0;
+                    p.x = i+TypeAtri[cnt*3+2][0]; p.y = j+TypeAtri[cnt*3+2][1]; p.z = k+TypeAtri[cnt*3+2][2]; p.v = 1e-6;
                     vertex.push_back(p);
                     sub3 = rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]];
                 }

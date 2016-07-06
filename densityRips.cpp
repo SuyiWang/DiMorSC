@@ -1,3 +1,5 @@
+#define DEBUG 0
+
 #include "persistence.h"
 //#include "bitmap_image.hpp"
 #include <ctime>
@@ -19,17 +21,19 @@ int main(int argc, char* argv[]){
 // Input: Simplicial complex - vertex list / edge list / triangle list
 // Output: A graph - vertex list / edge list
 //
+    /*
     if (argc == 1){
         argv[1] = "testComplex_ms.txt";
         argv[2] = "outvert2d.txt";
         argv[3] = "outedge2d.txt";
         argv[4] = "24";
     }
+    */
 	Simplicial2Complex K;
 
 	cout << "Reading in simplicial complex...\n";
 	// 2D defined by edge. 3D defined by vertex.
-	K.buildComplexFromFile(argv[1]); //<<<<<<<<<<< Change this if necessary [File: Triangle defined by edge][File2: by vertex]
+	K.buildComplexFromFile2(argv[1]); //<<<<<<<<<<< Change this if necessary [File: Triangle defined by edge][File2: by vertex]
 	//K.outputComplex("testcomplex0.txt");
 	cout << "Done\n";
 
@@ -44,32 +48,36 @@ int main(int argc, char* argv[]){
 	cout << "Building filtration...\n";
 	P.buildFiltration();
 	cout << "Done\n";
-
-	ofstream filtration("filtration.txt", ios_base::out | ios_base::trunc);
-	filtration << setprecision(16);
-	for (vector<Simplex*>::iterator it = P.filtration.begin(); it != P.filtration.end(); it++){
-		filtration << (*it)->funcValue << " ";
-		if ((*it)->dim == 0){
-			filtration << "Vertex " << ((Vertex*)(*it))->getVPosition() << endl;
+	
+	if (DEBUG){
+		ofstream filtration("filtration.txt", ios_base::out | ios_base::trunc);
+		filtration << setprecision(16);
+		for (vector<Simplex*>::iterator it = P.filtration.begin(); it != P.filtration.end(); it++){
+			filtration << (*it)->funcValue << " ";
+			if ((*it)->dim == 0){
+				filtration << "Vertex " << ((Vertex*)(*it))->getVPosition() << endl;
+			}
+			else if ((*it)->dim == 1){
+				filtration << "+ " << ((Edge*)(*it))->getSymPerturb() << "e " <<"Edge " << ((Edge*)(*it))->getEPosition() << endl;
+			}
+			else if ((*it)->dim == 2){
+				filtration <<"+ " << get<0>(((Triangle*)(*it))->getSymPerturb()) << "e + " << get<1>(((Triangle*)(*it))->getSymPerturb()) << "e2 " << "Triangle " << ((Triangle*)(*it))->getTPosition() << endl;
+			}
 		}
-		else if ((*it)->dim == 1){
-			filtration << "+ " << ((Edge*)(*it))->getSymPerturb() << "e " <<"Edge " << ((Edge*)(*it))->getEPosition() << endl;
-		}
-		else if ((*it)->dim == 2){
-			filtration <<"+ " << get<0>(((Triangle*)(*it))->getSymPerturb()) << "e + " << get<1>(((Triangle*)(*it))->getSymPerturb()) << "e2 " << "Triangle " << ((Triangle*)(*it))->getTPosition() << endl;
-		}
+		filtration.close();
 	}
-	filtration.close();
 
 
 
 	cout << "Computing persistence pairs...\n";
 	P.computePersistencePairsWithClear();
 	cout << "Done!\n";
-
-	cout << "Outputing persistence pairs...\n";
-	P.outputPersistencePairs("persistencePairs.txt");
-	cout << "Done\n";
+	
+	if (DEBUG){
+		cout << "Outputing persistence pairs...\n";
+		P.outputPersistencePairs("persistencePairs.txt");
+		cout << "Done\n";
+	}
 
 	cout << "Cancelling persistence pairs...\n";
 	P.cancelPersistencePairs(atof(argv[4]));

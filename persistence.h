@@ -7,8 +7,6 @@
 #include <iostream>
 using namespace std;
 
-#define DEBUG 0
-
 typedef struct {
 	Vertex *min;
 	Edge *saddle;
@@ -39,6 +37,9 @@ public:
 			return true;
 		}
 		else if (fabs(p.persistence - q.persistence) < 1e-8 && p.symPerturb < q.symPerturb){
+			return true;
+		}else if(fabs(p.persistence - q.persistence) < 1e-8 && fabs(p.symPerturb - q.symPerturb) < 1e-8 && p.loc_diff < q.loc_diff){
+			//cout<<"caught something"<<endl;
 			return true;
 		}else{
 			return false;
@@ -205,7 +206,7 @@ void PersistencePairs::computePersistencePairs2(){
 		}
 	}
 
-	boundaryMatrix->output("boundary.txt");
+	if (DEBUG) boundaryMatrix->output("boundary.txt");
 
 	cout << "\tInitializing pivot array...\n";
 	/*The ith entry of pivots stores the number j such that the ith row is the pivot row of the jth column in the reduced matrix*/
@@ -405,8 +406,9 @@ void PersistencePairs::computePersistencePairsWithClear(){
 						Edge *e = (Edge*)s2;
 						double persistence = e->funcValue - v->funcValue;
 						double symPerturb = e->getSymPerturb();
-
-						persistencePair01 pp = { v, e, persistence, symPerturb };
+						double loc_diff = e->filtrationPosition - v->filtrationPosition;
+						
+						persistencePair01 pp = { v, e, persistence, symPerturb, loc_diff };
 						this->msPersistencePairs.push_back(pp);
 					}
 					else{
@@ -497,9 +499,9 @@ vector<Simplex*>* PersistencePairs::isCancellable(const persistencePair01& pp, o
             cout << "->";
             v->output();
             cout <<endl;
-        }
 
-		cancelData << "Index: 01, Persistence: " << pp.persistence << " + " << pp.symPerturb << "e" << " Cancellable: Yes (trivial)" << endl;
+			cancelData << "Index: 01, Persistence: " << pp.persistence << " + " << pp.symPerturb << "e" << " Cancellable: Yes (trivial)" << endl;
+		}
 		return new vector<Simplex*>({ (Simplex*)e, (Simplex*)v });
 	}
 
@@ -579,7 +581,7 @@ vector<Simplex*>* PersistencePairs::isCancellable(const persistencePair01& pp, o
 	for (int i = 0;(unsigned) i < paths.size(); i++){
 		vector<Simplex*> *path = paths[i];
 		if (path->back() == (Simplex*)v && hasPath == true){
-			cancelData << "Index: 01, Persistence: " << pp.persistence << " + " << pp.symPerturb << "e" << ", Cancellable: No, Reason: path not unique\n";
+			if (DEBUG) cancelData << "Index: 01, Persistence: " << pp.persistence << " + " << pp.symPerturb << "e" << ", Cancellable: No, Reason: path not unique\n";
 			return new vector<Simplex*>();
 		}
 		else if (path->back() == (Simplex*)v){
@@ -591,12 +593,12 @@ vector<Simplex*>* PersistencePairs::isCancellable(const persistencePair01& pp, o
 	Then uniquePath truly is unique. So we return it*/
 
 	if (hasPath == true){
-		cancelData << "Index: 01, Persistence: " << pp.persistence << " + " << pp.symPerturb << "e" << ", Cancellable: Yes\n";
+		if (DEBUG) cancelData << "Index: 01, Persistence: " << pp.persistence << " + " << pp.symPerturb << "e" << ", Cancellable: Yes\n";
 		return uniquePath;
 	}
 	else{
 		/*Otherwise, there is no path from e to v*/
-		cancelData << "Index: 01, Persistence: " << pp.persistence << " + " << pp.symPerturb << "e" << ", Cancellable: No, Reason: no path found\n";
+		if (DEBUG) cancelData << "Index: 01, Persistence: " << pp.persistence << " + " << pp.symPerturb << "e" << ", Cancellable: No, Reason: no path found";
 		return new vector<Simplex*>();
 	}
 }
@@ -622,7 +624,7 @@ vector<Simplex*>* PersistencePairs::isCancellable(const persistencePair12& pp, o
             saddle->output();
             cout<<endl;
         }
-		cancelData << "Index: 12, Persistence: "<< pp.persistence << " + " << pp.symPerturb1 << "e " << pp.symPerturb2 << " Cancellable: Yes (trivial)" << endl;
+		if (DEBUG) cancelData << "Index: 12, Persistence: "<< pp.persistence << " + " << pp.symPerturb1 << "e " << pp.symPerturb2 << " Cancellable: Yes (trivial)" << endl;
 		return new vector<Simplex*>({ (Simplex*)max,(Simplex*)saddle });
 	}
 	
@@ -724,12 +726,12 @@ vector<Simplex*>* PersistencePairs::isCancellable(const persistencePair12& pp, o
 	path.clear();
     curr = (Simplex*)saddle;
     if (visited_twice.count(curr) > 0){
-        cancelData << "Index: 12, Persistence: " << pp.persistence << " + " << pp.symPerturb1 << "e" << ", Cancellable: No, Reason: path not unique1\n";
+        if (DEBUG) cancelData << "Index: 12, Persistence: " << pp.persistence << " + " << pp.symPerturb1 << "e" << ", Cancellable: No, Reason: path not unique1\n";
         return new vector<Simplex*>();
     }else if (visited_once.count(curr) > 0){
         while (curr!=NULL){
             if (visited_twice.count(curr) > 0){
-                cancelData << "Index: 12, Persistence: " << pp.persistence << " + " << pp.symPerturb1 << "e" << ", Cancellable: No, Reason: path not unique2\n";
+                if (DEBUG) cancelData << "Index: 12, Persistence: " << pp.persistence << " + " << pp.symPerturb1 << "e" << ", Cancellable: No, Reason: path not unique2\n";
                 return new vector<Simplex*>();
             }
             path.push_front(curr);
@@ -739,10 +741,10 @@ vector<Simplex*>* PersistencePairs::isCancellable(const persistencePair12& pp, o
 			uniquePath->push_back(path.front());
 			path.pop_front();
 		}
-		cancelData << "Index: 12, Persistence: " << pp.persistence << " + " << pp.symPerturb1 << "e" << ", Cancellable: Yes.\n";
+		if (DEBUG) cancelData << "Index: 12, Persistence: " << pp.persistence << " + " << pp.symPerturb1 << "e" << ", Cancellable: Yes.\n";
         return uniquePath;
     }
-	cancelData << "Index: 12, Persistence: " << pp.persistence << " + " << pp.symPerturb1 << "e" << pp.symPerturb2 <<", Cancellable: No, Reason: No path.\n";
+	if (DEBUG) cancelData << "Index: 12, Persistence: " << pp.persistence << " + " << pp.symPerturb1 << "e" << pp.symPerturb2 <<", Cancellable: No, Reason: No path.\n";
     return new vector<Simplex*>();
 }
 
@@ -832,7 +834,7 @@ void PersistencePairs::cancelPersistencePairs(double delta){
 	sort(smPersistencePairs.begin(), smPersistencePairs.end(), PersistencePairs::persistencePairCompare12);
 	cout << "\tDone\n";
 
-	this->outputPersistencePairs("persistencePairs.txt");
+	if (DEBUG) this->outputPersistencePairs("persistencePairs.txt");
 
 	/*cout << "\tOutputting persistence pairs...\n";
 	ofstream persistencePairs("persistencePairs.txt", ios_base::trunc | ios_base::out);
@@ -1002,9 +1004,10 @@ void PersistencePairs::cancelPersistencePairs(double delta){
 			i++;
 			if (i % 10 == 0){
 				cout << "\r";
-				cout << "\t" << i << "/" << msPersistencePairs.size() <<endl;
+				cout << "\t" << i << "/" << msPersistencePairs.size() <<"...";
 			}
 		}
+		cout<<endl;
 	}
 	else if (j < smPersistencePairs.size()){
 		while (j < smPersistencePairs.size()){
@@ -1028,9 +1031,10 @@ void PersistencePairs::cancelPersistencePairs(double delta){
 			j++;
 			if (j % 10 == 0){
 				cout << "\r";
-				cout << "\t" << j << "/" << smPersistencePairs.size() <<endl;
+				cout << "\t" << j << "/" << smPersistencePairs.size();
 			}
 		}
+		cout<<endl;
 	}
 	cout << "Cancelled Pair: " <<count<<endl;
 

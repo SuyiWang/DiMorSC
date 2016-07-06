@@ -11,7 +11,7 @@
 #include <unordered_map>
 #include <map>
 // #include "C:\Program Files\MATLAB\R2015b\extern\include\mat.h"
-#define DIM 2
+#define DIM 3
 // #define min(a,b) (a <= b)? a : b
 using namespace std;
 
