@@ -354,6 +354,7 @@ void PersistencePairs::computePersistencePairsWithClear(){
 			if (j % 100000 == 0) {
 				cout << "\r";
 				cout << "\tHandling column " << j << "/" << this->filtration.size() << "...";
+				cout.flush();
 			}
 
 			/*If the column is 0, then there is nothing to do. Move on to the next column*/
@@ -407,7 +408,8 @@ void PersistencePairs::computePersistencePairsWithClear(){
 						double persistence = e->funcValue - v->funcValue;
 						double symPerturb = e->getSymPerturb();
 						double loc_diff = e->filtrationPosition - v->filtrationPosition;
-						
+						int c_type = 1;
+						e->set_type(c_type);
 						persistencePair01 pp = { v, e, persistence, symPerturb, loc_diff };
 						this->msPersistencePairs.push_back(pp);
 					}
@@ -418,6 +420,8 @@ void PersistencePairs::computePersistencePairsWithClear(){
 						double symPerturb1 = get<0>(t->getSymPerturb()) - e->getSymPerturb();
 						double symPerturb2 = get<1>(t->getSymPerturb());
 						double loc_diff = t->filtrationPosition - e->filtrationPosition;
+						int c_type = 2;
+						e->set_type(c_type);
 						persistencePair12 pp = { e, t, persistence, symPerturb1, symPerturb2, loc_diff };
 						this->smPersistencePairs.push_back(pp);
 					}
@@ -494,13 +498,7 @@ vector<Simplex*>* PersistencePairs::isCancellable(const persistencePair01& pp, o
 	//if they have 0 persistence, we know they are cancellable and take this shortcut
 	if (fabs(e->funcValue - v->funcValue)<1e-8 && v->hasEdge(e)) {
         if (DEBUG) {
-            cout << "@root trivial: \tE";
-            e->output();
-            cout << "->";
-            v->output();
-            cout <<endl;
-
-			cancelData << "Index: 01, Persistence: " << pp.persistence << " + " << pp.symPerturb << "e" << " Cancellable: Yes (trivial)" << endl;
+            cancelData << "Index: 01, Persistence: " << pp.persistence << " + " << pp.symPerturb << "e" << " Cancellable: Yes (trivial)" << endl;
 		}
 		return new vector<Simplex*>({ (Simplex*)e, (Simplex*)v });
 	}
@@ -581,7 +579,7 @@ vector<Simplex*>* PersistencePairs::isCancellable(const persistencePair01& pp, o
 	for (int i = 0;(unsigned) i < paths.size(); i++){
 		vector<Simplex*> *path = paths[i];
 		if (path->back() == (Simplex*)v && hasPath == true){
-			if (DEBUG) cancelData << "Index: 01, Persistence: " << pp.persistence << " + " << pp.symPerturb << "e" << ", Cancellable: No, Reason: path not unique\n";
+			cancelData << "Index: 01, Persistence: " << pp.persistence << " + " << pp.symPerturb << "e" << ", Cancellable: No, Reason: path not unique\n";
 			return new vector<Simplex*>();
 		}
 		else if (path->back() == (Simplex*)v){
@@ -593,12 +591,12 @@ vector<Simplex*>* PersistencePairs::isCancellable(const persistencePair01& pp, o
 	Then uniquePath truly is unique. So we return it*/
 
 	if (hasPath == true){
-		if (DEBUG) cancelData << "Index: 01, Persistence: " << pp.persistence << " + " << pp.symPerturb << "e" << ", Cancellable: Yes\n";
+		cancelData << "Index: 01, Persistence: " << pp.persistence << " + " << pp.symPerturb << "e" << ", Cancellable: Yes\n";
 		return uniquePath;
 	}
 	else{
 		/*Otherwise, there is no path from e to v*/
-		if (DEBUG) cancelData << "Index: 01, Persistence: " << pp.persistence << " + " << pp.symPerturb << "e" << ", Cancellable: No, Reason: no path found";
+		cancelData << "Index: 01, Persistence: " << pp.persistence << " + " << pp.symPerturb << "e" << ", Cancellable: No, Reason: no path found";
 		return new vector<Simplex*>();
 	}
 }
@@ -618,13 +616,9 @@ vector<Simplex*>* PersistencePairs::isCancellable(const persistencePair12& pp, o
 
 	if (fabs(max->funcValue - saddle->funcValue) < 1e-8 && saddle->hasTriangle(max)) {
         if (DEBUG){
-            cout << "@root trivial: \tT";
-            max->output();
-            cout << "->";
-            saddle->output();
-            cout<<endl;
+			cancelData << "Index: 12, Persistence: "<< pp.persistence << " + " << pp.symPerturb1 << "e " << pp.symPerturb2 << " Cancellable: Yes (trivial)" << endl;
         }
-		if (DEBUG) cancelData << "Index: 12, Persistence: "<< pp.persistence << " + " << pp.symPerturb1 << "e " << pp.symPerturb2 << " Cancellable: Yes (trivial)" << endl;
+		
 		return new vector<Simplex*>({ (Simplex*)max,(Simplex*)saddle });
 	}
 	
@@ -641,31 +635,21 @@ vector<Simplex*>* PersistencePairs::isCancellable(const persistencePair12& pp, o
 		if (curr->dim == 1){
 			Edge *e = (Edge*)curr;
 			Triangle* paired_triangle = V->containsPair(e);
-			if (DEBUG) {
-				cout << "@node: \tE";
-				e->output();
-				cout << "\t";
-			}
 			if (paired_triangle != NULL){
                 Simplex* simp_triangle = (Simplex*) paired_triangle;
-				if (DEBUG) {
-					cout << "@found: \tT";
-					((Triangle*)simp_triangle)->output();
-					cout << "\t";
-				}
 				if (visited_twice.count(simp_triangle)>0){
-					if (DEBUG) cout << "Twice+";
+					// if (DEBUG) cout << "Twice+";
 				}else if (visited_once.count(simp_triangle) > 0){
-					if (DEBUG) cout << "Twice!";
+					// if (DEBUG) cout << "Twice!";
 					visited_twice.insert(simp_triangle);
 				}else{
-					if (DEBUG) cout << "Once";
+					// if (DEBUG) cout << "Once";
 				    simp_triangle->prev = curr;
 					visited_once.insert(simp_triangle);
 					BFSqueue.push_back(simp_triangle);
 				}
 			}
-			if (DEBUG) cout << endl;
+			// if (DEBUG) cout << endl;
 		}
 		else{
 			Triangle *t = (Triangle*)curr;
@@ -673,21 +657,16 @@ vector<Simplex*>* PersistencePairs::isCancellable(const persistencePair12& pp, o
 			Edge *e2 = get<1>(t->getEdges());
 			Edge *e3 = get<2>(t->getEdges());
 
-			if (DEBUG) {
-				cout << "@node: \tT ";
-				t->output();
-				cout << "\t";
-			}
             Simplex* simp_edge = (Simplex*) e1;
             if (visited_once.count(simp_edge) == 0){
                 simp_edge->prev = curr;
                 visited_once.insert(simp_edge);
                 BFSqueue.push_back(simp_edge);
-				if (DEBUG) cout << "@found: \tT" << simp_edge->funcValue << "Once";
+				//if (DEBUG) cout << "@found: \tT" << simp_edge->funcValue << "Once";
             }else if (visited_twice.count(simp_edge) == 0){
                 if (curr->prev != simp_edge){
 					visited_twice.insert(simp_edge);
-					if (DEBUG) cout << "@found: \tT" << simp_edge->funcValue << "Twice!";
+					//if (DEBUG) cout << "@found: \tT" << simp_edge->funcValue << "Twice!";
 				}
             }
 
@@ -696,11 +675,11 @@ vector<Simplex*>* PersistencePairs::isCancellable(const persistencePair12& pp, o
                 simp_edge->prev = curr;
                 visited_once.insert(simp_edge);
                 BFSqueue.push_back(simp_edge);
-				if (DEBUG) cout << "@found: \tT" << simp_edge->funcValue << "Once";
+				//if (DEBUG) cout << "@found: \tT" << simp_edge->funcValue << "Once";
             }else if (visited_twice.count(simp_edge) == 0){
                 if (curr->prev != simp_edge){
 					visited_twice.insert(simp_edge);
-					if (DEBUG) cout << "@found: \tT" << simp_edge->funcValue << "twice!";
+					//if (DEBUG) cout << "@found: \tT" << simp_edge->funcValue << "twice!";
 				}
             }
 
@@ -709,15 +688,15 @@ vector<Simplex*>* PersistencePairs::isCancellable(const persistencePair12& pp, o
                 simp_edge->prev = curr;
                 visited_once.insert(simp_edge);
                 BFSqueue.push_back(simp_edge);
-				if (DEBUG) cout << "@found: \tT" << simp_edge->funcValue << "Once";
+				//if (DEBUG) cout << "@found: \tT" << simp_edge->funcValue << "Once";
             }else if (visited_twice.count(simp_edge) == 0){
                 if (curr->prev != simp_edge){
 					visited_twice.insert(simp_edge);
-					if (DEBUG) cout << "@found: \tT" << simp_edge->funcValue << "twice!";
+					//if (DEBUG) cout << "@found: \tT" << simp_edge->funcValue << "twice!";
 				}
             }
 
-			if (DEBUG) cout << endl;
+			//if (DEBUG) cout << endl;
 		}
 	}
 
@@ -812,12 +791,12 @@ void PersistencePairs::cancelAlongVPath(vector<Simplex*>* VPath){
 				if (i > 0){
 					V->addPair(e, (Triangle*)VPath->at(i - 1));
 				}
-				if (DEBUG) {e->output(); cout<<" ";}
+				//if (DEBUG) {e->output(); cout<<" ";}
 			}else{
-			    if (DEBUG) {((Triangle*)s)->output(); cout<<" ";}
+			    //if (DEBUG) {((Triangle*)s)->output(); cout<<" ";}
 			}
 		}
-		if (DEBUG) cout<<endl;
+		//if (DEBUG) cout<<endl;
 	}
 	else{
 		cout << "This shouldn't happen\n";
@@ -935,7 +914,7 @@ void PersistencePairs::cancelPersistencePairs(double delta){
 				//double elapsedTime = eDur.count();
 				//average4 = (elapsedTime + a4Count * average4) / (a4Count + 1);
 				//a4Count++;
-				if (DEBUG) cout<< pair1.persistence << endl;
+				// if (DEBUG) cout<< pair1.persistence << endl;
 				if (!VPath->empty()){
 					count++;
 					this->cancelAlongVPath(VPath);
@@ -954,16 +933,9 @@ void PersistencePairs::cancelPersistencePairs(double delta){
 				double elapsedTime = eDur.count();
 				average4 = (elapsedTime + a4Count * average4) / (a4Count + 1);
 				a4Count++;*/
-				if (DEBUG) cout<< pair2.persistence << endl;
+				// if (DEBUG) cout<< pair2.persistence << endl;
 				if (!VPath->empty()){
 					count++;
-					if (DEBUG){
-					    cout<<"Max: ";
-                        pair2.max->output();
-                        cout<<"saddle: ";
-                        pair2.saddle->output();
-                        cout<<endl;
-					}
 					this->cancelAlongVPath(VPath);
 					K->removeCriticalPoint(pair2.saddle);
 					K->removeCriticalPoint(pair2.max);
@@ -977,6 +949,7 @@ void PersistencePairs::cancelPersistencePairs(double delta){
 		if (Pcounter%10000==0){
 			cout << "\r";
 			cout << "\t" << Pcounter << "/" << msPersistencePairs.size() + smPersistencePairs.size() << "...";
+			cout.flush();
 		}
 	}
 
@@ -1002,9 +975,10 @@ void PersistencePairs::cancelPersistencePairs(double delta){
 				}
 			}
 			i++;
-			if (i % 10 == 0){
+			if (i % 100 == 0){
 				cout << "\r";
 				cout << "\t" << i << "/" << msPersistencePairs.size() <<"...";
+				cout.flush();
 			}
 		}
 		cout<<endl;
@@ -1029,9 +1003,10 @@ void PersistencePairs::cancelPersistencePairs(double delta){
 			}
 
 			j++;
-			if (j % 10 == 0){
+			if (j % 100 == 0){
 				cout << "\r";
 				cout << "\t" << j << "/" << smPersistencePairs.size();
+				cout.flush();
 			}
 		}
 		cout<<endl;
