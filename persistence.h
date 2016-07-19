@@ -5,6 +5,27 @@
 //#include <windows.h>
 //#include <chrono>
 #include <iostream>
+#include <algorithm>
+
+#include <phat/compute_persistence_pairs.h>
+
+#include <phat/representations/vector_vector.h>
+#include <phat/representations/vector_heap.h>
+#include <phat/representations/vector_set.h>
+#include <phat/representations/vector_list.h>
+#include <phat/representations/sparse_pivot_column.h>
+#include <phat/representations/heap_pivot_column.h>
+#include <phat/representations/full_pivot_column.h>
+#include <phat/representations/bit_tree_pivot_column.h>
+
+#include <phat/algorithms/twist_reduction.h>
+#include <phat/algorithms/standard_reduction.h>
+#include <phat/algorithms/row_reduction.h>
+#include <phat/algorithms/chunk_reduction.h>
+#include <phat/algorithms/spectral_sequence_reduction.h>
+
+#include <phat/helpers/dualize.h>
+
 using namespace std;
 
 typedef struct {
@@ -68,12 +89,13 @@ public:
 
 	PersistencePairs(Simplicial2Complex *K){
 		this->K = K;
+		msPersistencePairs.clear();
+		smPersistencePairs.clear();
 	}
 	void buildFiltration();
 
-	void computePersistencePairs2();
 	void computePersistencePairsWithClear();
-	void computePersistencePairsSeparate();
+	void PhatPersistence();
 
 	vector<Simplex*>* isCancellable(const persistencePair01&, ofstream&);
 	vector <Simplex*>* isCancellable(const persistencePair12&, ofstream&);
@@ -118,173 +140,114 @@ void PersistencePairs::buildFiltration(){
 	}
 }
 
-/*This computes (0,1)-persistence pairs including the ones with 0 persistence which are canceled out
-in Simplex::cancel0PersistencePairs(). This is not a problem since they would be the first to be canceled anyway,
-and we need to search paths between critical simplices to test for cancelability. By treating every simplex as critical,
-we lose the ability to know right away whether a given pair has a path between them, but this is okay because we need
-to search for multiple paths when we cancel them anyway.*/
 
-//void PersistencePairs::compute01PersistencePairs(){
-//	UnionFind uf;
-//	for (vector<Simplex*>::iterator it = filtration.begin(); it != filtration.end(); it++){
-//		Simplex *s = *it;
-//		if (s->dim == 1){
-//			Vertex *v = (Vertex*)s;
-//			/*Every vertex creates a new connected component, so it is tagged positive*/
-//			v->parity = Simplex::POSITIVE;
-//			uf.makeSet(v);
-//		}
-//		else if (s->dim == 2){
-//			Edge *e = (Edge*)s;
-//			Vertex *v1 = get<0>(e->getVertices());
-//			Vertex *v2 = get<1>(e->getVertices());
-//			Vertex *rootV1 = uf.findSet(v1);
-//			Vertex *rootV2 = uf.findSet(v2);
-//
-//			if (rootV1 != rootV2)
-//			{
-//				/*If rootV1 != rootV2, then adding e connects different connected components, so e is negative*/
-//				e->parity = Simplex::NEGATIVE;
-//				/*We need to pair e with one of the roots, namely the one that came into the filtration first. The "older" one*/
-//				Vertex *min = rootV1;
-//				if (rootV2->getFuncValue() < min->getFuncValue()){
-//					min = rootV2;
-//				}
-//				persistencePair01 pair = { min, e, e->getFuncValue() - min->getFuncValue() };
-//				/*If the persistence of pair is 0, then we don't bother adding it to the vector of (0,1)-persistence pairs, since we already canceled them*/
-//				if (pair.persistence != 0){
-//					this->msPersistencePairs.push_back(pair);
-//				}
-//			}
-//
-//
-//		}
-//	}
-//}
-
-void PersistencePairs::computePersistencePairs2(){
-	SparseZ2Matrix *boundaryMatrix = new SparseZ2Matrix(this->filtration.size(), this->filtration.size());
-
+void PersistencePairs::PhatPersistence(){
+	// generate boundary matrix
 	cout << "\tInitializing boundary matrix...\n";
-	cout << "\t\t" << this->filtration.size() << " x " << this->filtration.size() << "\n";
-	for (unsigned int i = 0; i < this->filtration.size(); i++) {
+	cout << "\t\tMatrix size: " << this->filtration.size() << "\n";
+	phat::boundary_matrix< phat::vector_vector > boundary_matrix;
+	boundary_matrix.set_num_cols(this->filtration.size());
+	
+	std::vector< phat::index > temp_col;
+	for (unsigned int i = 0; i < this->filtration.size(); i++){
 		Simplex *s = filtration[i];
-		if (s->dim == 0) {
-			//no boundary. no bits to set in matrix
+		temp_col.clear();
+				
+		if (s->dim == 0){
+			// no boundary. no bits to set in matrix
+			boundary_matrix.set_dim( i, 0 );
 		}
-		else if (s->dim == 1) {
+		else if (s->dim == 1){
+			// edge
+			boundary_matrix.set_dim( i, 1 );
 			Edge *e = (Edge*)s;
 			Vertex *v1 = get<0>(e->getVertices());
 			Vertex *v2 = get<1>(e->getVertices());
 			if (v1->filtrationPosition < v2->filtrationPosition) {
-				boundaryMatrix->set(v1->filtrationPosition, i);
-				boundaryMatrix->set(v2->filtrationPosition, i);
+				temp_col.push_back(v1->filtrationPosition);
+				temp_col.push_back(v2->filtrationPosition);				
+			}else{
+				temp_col.push_back(v2->filtrationPosition);
+				temp_col.push_back(v1->filtrationPosition);		
 			}
 		}
-		else if (s->dim == 2) {
+		else if (s->dim == 2){
+			// triangle
+			boundary_matrix.set_dim( i, 2 );
 			Triangle *t = (Triangle*)s;
 			Edge *e1 = get<0>(t->getEdges());
 			Edge *e2 = get<1>(t->getEdges());
 			Edge *e3 = get<2>(t->getEdges());
 			Edge *edges[3] = { e1,e2,e3 };
-			Edge *min = e1;
-			for (int j = 0; j < 3; j++)
-			{
-				int min = j;
-				for (int k = j; k < 3; k++) {
-					if (edges[k]->filtrationPosition < edges[min]->filtrationPosition) {
-						min = k;
+			for(int j = 0; j < 2; j++){
+				for(int k = j + 1; k < 3; k++){
+					if(edges[k]->filtrationPosition \
+					   < edges[j]->filtrationPosition){
+						swap(edges[k], edges[j]);
 					}
 				}
-				Edge *tmp = edges[min];
-				edges[min] = edges[j];
-				edges[j] = tmp;
 			}
-			boundaryMatrix->set(edges[0]->filtrationPosition, i);
-			boundaryMatrix->set(edges[1]->filtrationPosition, i);
-			boundaryMatrix->set(edges[2]->filtrationPosition, i);
+			temp_col.push_back(edges[0]->filtrationPosition);
+			temp_col.push_back(edges[1]->filtrationPosition);
+			temp_col.push_back(edges[2]->filtrationPosition);
+		}
+		boundary_matrix.set_col( i, temp_col );
+	}
+	cout << "\tInitialized!\n";
+	
+	// call Phat
+	cout << "\tComputing persitence pairs...\n";
+	phat::persistence_pairs pairs;
+	phat::compute_persistence_pairs\
+		< phat::twist_reduction >( pairs, boundary_matrix );
+	pairs.sort();
+	cout << "\tComputed and sorted!\n";
+	
+	// post processing: add sm-ms pairs, set critical points
+	cout << "\tCounting ms-pairs and sm-pairs...";
+	for( phat::index idx = 0; idx < pairs.get_num_pairs(); idx++ ){
+		Simplex *s1 = this->filtration[pairs.get_pair( idx ).first];
+		Simplex *s2 = this->filtration[pairs.get_pair( idx ).second];
+		if (s1->dim == 0){
+			Vertex *v = (Vertex*)s1;
+			Edge *e = (Edge*)s2;
+			double persistence = e->funcValue - v->funcValue;
+			double symPerturb = e->getSymPerturb();
+			double loc_diff = e->filtrationPosition - v->filtrationPosition;
+			int c_type = 1;
+			e->set_type(c_type);
+			persistencePair01 pp = { v, e, persistence, symPerturb, loc_diff };
+			this->msPersistencePairs.push_back(pp);
+		}
+		else{
+			Edge* e = (Edge*)s1;
+			Triangle* t = (Triangle*)s2;
+			double persistence = t->funcValue - e->funcValue;
+			double symPerturb1 = get<0>(t->getSymPerturb())\
+							     - e->getSymPerturb();
+			double symPerturb2 = get<1>(t->getSymPerturb());
+			double loc_diff = t->filtrationPosition - e->filtrationPosition;
+			int c_type = 2;
+			e->set_type(c_type);
+			persistencePair12 pp = { e, t, persistence, symPerturb1,\
+									symPerturb2, loc_diff };
+			this->smPersistencePairs.push_back(pp);
 		}
 	}
-
-	if (DEBUG) boundaryMatrix->output("boundary.txt");
-
-	cout << "\tInitializing pivot array...\n";
-	/*The ith entry of pivots stores the number j such that the ith row is the pivot row of the jth column in the reduced matrix*/
-	int *pivots = new int[this->filtration.size()];
-	/*Initially, all entries are set to -1, meaning "unknown"*/
-	for (unsigned int i = 0; i < this->filtration.size(); i++){
-		pivots[i] = -1;
+	cout << "done!\n";
+	for (vector<Vertex*>::iterator it = this->K->vBegin();\
+		 it != this->K->vEnd(); it++) {
+		K->addCriticalPoint((Simplex*)*it);
 	}
-
-	/*Go through the columns in filtration order*/
-	for (unsigned int j = 0; j < this->filtration.size(); j++){
-		if (j % 100000 == 0) cout << "\tHandling column " << j <<"/"<< this->filtration.size() << "...\n";
-		/*If the column is 0, then there is nothing to do. Move on to the next column*/
-		if (boundaryMatrix->isZeroColumn(j) == true) continue;
-		/*If the column is not 0, find the pivot*/
-		unsigned int pivotJ = boundaryMatrix->getPivotRow(j);
-		/*As long as column j is not 0, and there is some previous column with the same pivot row,
-		add the previous column to column j in order to cancel the pivot. Then find the new pivot
-		and repeat until column j is 0 or there is no previous column to cancel its pivot*/
-		while (boundaryMatrix->isZeroColumn(j) == false && pivots[pivotJ] != -1){
-			boundaryMatrix->add((unsigned int)pivots[pivotJ], j);
-			if (boundaryMatrix->isZeroColumn(j) == false){
-				pivotJ = boundaryMatrix->getPivotRow(j);
-			}
-		}
-
-		/*If the column j gets to this point and is still not 0, then it must have a pivot that can't be canceled.
-		In which case, the simplex corresponding to the pivot row and the the simplex corresponding to column j form
-		a persistence pair*/
-		if (boundaryMatrix->isZeroColumn(j) == false){
-			/*Set column j as the column with row pivotJ as its pivot in the reduced matrix*/
-			unsigned int i = pivotJ;
-			pivots[i] = j;
-
-			/*Add persistence pair*/
-			Simplex *s1 = this->filtration[i];
-			Simplex *s2 = this->filtration[j];
-			if (s1->dim == 0){
-				Vertex *v = (Vertex*)s1;
-				Edge *e = (Edge*)s2;
-				double persistence = e->funcValue - v->funcValue;
-
-				persistencePair01 pp = { v, e, persistence };
-				this->msPersistencePairs.push_back(pp);
-			}
-			else{
-				Edge* e = (Edge*)s1;
-				Triangle* t = (Triangle*)s2;
-				double persistence = t->funcValue - e->funcValue;
-
-				persistencePair12 pp = { e, t, persistence };
-				this->smPersistencePairs.push_back(pp);
-			}
-		}
+	for (vector<Edge*>::iterator it = this->K->eBegin();\
+		 it != this->K->eEnd(); it++) {
+		K->addCriticalPoint((Simplex*)*it);
 	}
-	/*for (vector<Vertex*>::iterator it = this->K->vBegin(); it != this->K->vEnd(); it++) {
-	K->addCriticalPoint((Simplex*)*it);
+	for (vector<Triangle*>::iterator it = this->K->tBegin();\
+		 it != this->K->tEnd(); it++) {
+		K->addCriticalPoint((Simplex*)*it);
 	}
-	for (vector<Edge*>::iterator it = this->K->eBegin(); it != this->K->eEnd(); it++) {
-	K->addCriticalPoint((Simplex*)*it);
-	}
-	for (vector<Triangle*>::iterator it = this->K->tBegin(); it != this->K->tEnd(); it++) {
-	K->addCriticalPoint((Simplex*)*it);
-	}*/
-
-	delete boundaryMatrix;
-	for (vector<persistencePair01>::iterator it = this->msPersistencePairs.begin(); it != this->msPersistencePairs.end(); it++) {
-		persistencePair01 p = *it;
-		this->K->addCriticalPoint(p.min);
-		this->K->addCriticalPoint(p.saddle);
-	}
-	cout << "# of min-saddle pairs: " << this->msPersistencePairs.size() << "\n";
-	cout << "# of saddle-max pairs: " << this->smPersistencePairs.size() << "\n";
-	int count = 0;
-	for (vector<Edge*>::iterator it = K->eBegin(); it != K->eEnd(); it++) {
-		count++;
-	}
-	cout << "# of edges in complex: " << count << "\n";
+	cout << "\tCritical points initialized\n";
 }
 
 //Compute persistence pairs
@@ -462,30 +425,6 @@ void PersistencePairs::computePersistencePairsWithClear(){
 	cout << "average time to add columns: " << average2 << "s\n";
 	cout << "average time to add persistence pairs: " << average3 << "s\n";
 }
-
-//void PersistencePairs::computePersistencePairsSeparate() {
-//	int count = 0;
-//	for (vector<Simplex*>::iterator it = this->filtration.begin(); it != this->filtration.end(); it++) {
-//		Simplex *s = *it;
-//		if (s->dim == 1 || s->dim == 2) {
-//			count++;
-//		}
-//	}
-//
-//	SparseZ2Matrix *boundaryMatrix1 = new SparseZ2Matrix(count, count);
-//	int idx = 0;
-//	for (unsigned int i = 0; i < this->filtration.size(); i++) {
-//		Simplex *s = filtration[i];
-//		if (s->dim == 1) {
-//			Edge *e = (Edge*)s;
-//
-//		}
-//		else if (s->dim == 2) {
-//
-//		}
-//	}
-//
-//}
 
 //test cancellability
 vector<Simplex*>* PersistencePairs::isCancellable(const persistencePair01& pp, ofstream& cancelData){

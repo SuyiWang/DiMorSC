@@ -70,7 +70,7 @@ int main(int argc, char* argv[]){
 
 
 	cout << "Computing persistence pairs...\n";
-	P.computePersistencePairsWithClear();
+	P.PhatPersistence();
 	cout << "Done!\n";
 	
 	if (DEBUG){
