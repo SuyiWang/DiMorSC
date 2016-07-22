@@ -10,6 +10,7 @@
 
 
 %%  Data sets - Change this if necessary
+    addpath('privates');
 %   olfactory data
     default_path = '/media/My Passport/NeuronData/DIADEM/Olfactory Projection Fibers/Image Stacks/OP_';
 %   Necrotical Layer data.

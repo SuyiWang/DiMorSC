@@ -60,5 +60,4 @@ function [vert, edge, triangles] = TriangulationNew(density_map, filename)
     
 %%  Write input file for discrete morse
 %   edges and triangles are originally using vertex index starting from 1.
-    addpath('my_M_files');
     write_output(filename,vert, edge-1, triangles-1);

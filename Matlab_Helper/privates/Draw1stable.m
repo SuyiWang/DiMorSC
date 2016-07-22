@@ -32,8 +32,6 @@ function [vert, g] = Draw1stable(vertname, edgename)
 
 %%  Create adjacency graph
     g = sparse(edge(:,1),edge(:,2), ones(length(edge),1), length(vert), length(vert));
-
-    addpath('my_M_files');
     DrawGraph(g, vert(:,1:3), 'c',2);
     
     
@@ -42,5 +40,3 @@ function [vert, g] = Draw1stable(vertname, edgename)
     edge = edge(c_edge_idx,:);
     g_critical = sparse(edge(:,1),edge(:,2), ones(size(edge,1),1), length(vert), length(vert));
     DrawGraph(g_critical, vert(:,1:3), 'r',2)
-
-    % absG = ToAbstract_edge(g,1,vert,edge);

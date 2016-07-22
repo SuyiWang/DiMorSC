@@ -10,6 +10,7 @@
 %
 function write_output(filename, vertex, edges, triangles)
 
+
     m = size(vertex, 1);
     n = size(edges, 1);
     k = size(triangles, 1);
@@ -22,6 +23,7 @@ function write_output(filename, vertex, edges, triangles)
     fprintf(fp, '2 %d %d\n', edges');
     fclose(fp);
 
+    
 %%  .txt file: for discrete morse - Mainly use this file
     fp = fopen([filename '.txt'],'w');
     fprintf(fp, '%d\n', m);
@@ -32,6 +34,7 @@ function write_output(filename, vertex, edges, triangles)
     fprintf(fp, '%d %d %d\n', triangles');
     fclose(fp);
 
+    
 %%  .NDnet: for DisPerSE
     fp = fopen([filename '.a.NDnet'],'w');
     fprintf(fp, 'ANDNET\n3\n');
@@ -42,3 +45,4 @@ function write_output(filename, vertex, edges, triangles)
     fprintf(fp, '[ADDITIONAL_DATA]\nfield_value\n');
     fprintf(fp, '0\n');
     fprintf(fp, '%f\n', vertex(:,4)');
+    fclose(fp);
