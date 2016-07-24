@@ -1,0 +1,1 @@
+g++ densityRips.cpp -I./phat/include -std=c++11 -o density3D
