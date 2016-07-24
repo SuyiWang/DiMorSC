@@ -1,4 +1,10 @@
+%%  For every removed edge by the maximum spanning tree, only remove low value parts
+%   starting from the lowest-valued edge, all neighbouring edge with value
+%   less than 20% (or any given percentage) will be removed and other edges
+%   will be add back to the maximum spanning tree.
+
 function G = makeup(restG, edgeG, edgelist, vert, verbose, abs_idx)
+percentage = 0.2;
 MAXEDGE = sum(cellfun(@length, edgelist));
 I = zeros(MAXEDGE, 1);
 J = I;
@@ -19,7 +25,7 @@ for i = 1:length(treeI)
     
     % going right
     loopvar = minidx;
-    while loopvar<=edgelength && fieldvalue(edgevert(loopvar))< 1.2*minval
+    while loopvar<=edgelength && fieldvalue(edgevert(loopvar))< (1.0+percentage)*minval
         loopvar = loopvar+1;
     end
     
@@ -36,7 +42,7 @@ for i = 1:length(treeI)
     
     % going left
     loopvar = minidx;
-    while loopvar>0 && fieldvalue(edgevert(loopvar)) < 1.2*minval
+    while loopvar>0 && fieldvalue(edgevert(loopvar)) < (1.0+percentage)*minval
         loopvar = loopvar-1;
     end
     

@@ -1,6 +1,7 @@
 function [absG, edgeG, edgelist, abs_idx] = ToAbstract_branch(G, verbose, vert)
 fvalue = vert(:,4);
 graph = G+G';
+graph = graph - diag(diag(graph));
 degcount = zeros(length(G), 1);
 for i = 1:length(G)
     nbvert = find(graph(i,:));
@@ -91,8 +92,8 @@ for i = 1:length(abs_idx)
 
         edgeG(s, t) = edgecount;
         edgeG(t, s) = edgecount;
-        absG(s, t) = min(fvalue(edgelist{edgecount}));
-        absG(t, s) = min(fvalue(edgelist{edgecount}));
+        absG(s, t) = max(min(fvalue(edgelist{edgecount})), 1e-7);
+        absG(t, s) = max(min(fvalue(edgelist{edgecount})), 1e-7);
         if absG(s,t) <1e-6
             warning('caught edge with 0 weight');
         end

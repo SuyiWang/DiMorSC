@@ -27,6 +27,6 @@ function [ G, vert, mergemap, idx] = mergeduplicate( G, vert )
     idx = find(keeplist);
     vert = vert(idx, :);
     G = G(idx, idx);
-    save('Graph','G','vert');
+    %% save('Graph','G','vert');
 end
 
