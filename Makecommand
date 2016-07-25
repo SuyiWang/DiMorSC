@@ -1,1 +1,16 @@
 g++ densityRips.cpp -I./phat/include -std=c++11 -o density3D
+
+# the last parameter 20 is the persistence threshold
+./density3D Allen.txt output_vert.txt output_edge.txt 20
+
+
+The pipeline includes 3 steps:
+1. Run LoadAllen in matlab
+2. Run DensityRips - This should be compiled under C++ 11 and it is tested on both Ubuntu and Windows. A compilation command is provided in MakeCommand file.
+3. Process the output with Morse_post.m - it also generates the .swc file for vaa3D, but note that the output from DensityRips is usually a graph - so the strategy for converting it to a tree still remains discussion. Right now we use maximum spanning tree to enforce a tree structure.
+
+
+Dependencies:
+1) Our main code DensityRips depends on PHAT to compute persistence pairs. PHAT is available on github here (https://github.com/blazs/phat) - put PHAT file in the project root folder.
+2) Matlab code depends on matlab_bgl (https://www.mathworks.com/matlabcentral/fileexchange/10922-matlabbgl) - put matlab_bgl in matlab_helper folder
+3) vaa3d module depends on 'vaa3d_matlab_io', which is a folder in vaa3d source file - if you don't have it I can send you one separately.
