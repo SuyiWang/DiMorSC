@@ -9,6 +9,7 @@ Comments: Vertex index start from 1. All edges and triangles uses vertex index.
 */
 
 #include<stdio.h>
+#include<fstream>
 #include<vector>
 #include<string>
 #include<algorithm>
@@ -176,6 +177,68 @@ void init(vector<vector<vector<double> > > &MAP, string filename){
         vertex.push_back(p);
     }
     fclose(fp);
+    printf("done\n");
+}
+
+void bin_init(vector<vector<vector<double> > > &MAP, string filename){
+    ifstream binaryIO;
+    binaryIO.open("mapinput.bin", ios::binary);
+    if (!binaryIO.is_open()){
+    	printf("Error opening file\n");
+    	return;
+    }
+    
+    char* header_data = new char[sizeof(int) * 4];
+    int HEIGHT, WIDTH, DEPTH, LENGTH;
+    binaryIO.read(header_data, sizeof(int) * 4);
+	int* header_value = (int*) header_data;
+	HEIGHT = header_value[0];
+	WIDTH = header_value[1];
+	DEPTH = header_value[2];
+	LENGTH = header_value[3];
+
+    printf("Preparing density matrix %d-%d-%d\n", HEIGHT, WIDTH, DEPTH);
+	
+    MAP.clear();
+    rev_idx.clear();	
+    for (int i = 0; i < HEIGHT; ++i) {
+        // DIM 2
+        vector<vector<double> > tmp2dd;
+        vector<vector<int> > tmp2di;
+        MAP.push_back(tmp2dd);
+        rev_idx.push_back(tmp2di);
+        for (int j = 0; j < WIDTH; ++j){
+            // DIM 3
+            MAP[i].push_back(vector<double>(DEPTH, 0));
+            rev_idx[i].push_back(vector<int>(DEPTH, 0));
+        }
+    }
+
+    printf("Reading density matrix: total %d Lines\n", LENGTH);
+    char* density_data = new char[sizeof(double) * 4];
+    double* density_value = (double*) density_data;
+    for (int len = 0; len < LENGTH; ++len){
+        if (DEBUG&&len%10000 == 0)
+            printf("%d\n", len);
+        int i, j, k;
+        double v;
+        
+        binaryIO.read(density_data, sizeof(double) * 4);
+		i = floor(density_value[0] + 0.5);
+		j = floor(density_value[1] + 0.5);
+		k = floor(density_value[2] + 0.5);
+        v = density_value[3];
+        if (DEBUG){
+        	printf("%d %d %d %f\n", i, j, k, v);
+        }
+        i--;j--;k--;
+        MAP[i][j][k] = v;
+        rev_idx[i][j][k] = vertcount++;
+        point p;
+        p.x = i; p.y = j; p.z = k; p.v = v;
+        vertex.push_back(p);
+    }
+    binaryIO.close();
     printf("done\n");
 }
 
@@ -422,6 +485,43 @@ void output(){
     fclose(fp);
 }
 
+
+void bin_output(){
+    ofstream ofs("vert.bin",ios::binary);
+    printf("writing vertex\n");
+    char* vert = new char[sizeof(double) * 4];
+    double* vert_buffer = (double*) vert;
+    for (int i = 0; i < vertex.size(); i++){
+    	vert_buffer[0] = vertex[i].x; vert_buffer[1] = vertex[i].y;
+    	vert_buffer[2] = vertex[i].z; vert_buffer[3] = vertex[i].v;
+		ofs.write(vert, sizeof(double) * 4);
+    }
+    ofs.close();
+
+	ofs.open("edge.bin", ios::binary);
+    printf("writing edge\n");
+    char* edgechar = new char[sizeof(int) * 2];
+    int* edge_buffer = (int*) edgechar;
+    for (int i = 0; i < edge.size(); i++){
+    	edge_buffer[0] = edge[i].p1; edge_buffer[1] = edge[i].p2;
+        ofs.write(edgechar, sizeof(int) * 2);
+    }
+    ofs.close();
+
+    ofs.open("triangle.bin", ios::binary);
+    printf("writing triangle\n");
+    char* trianglechar = new char[sizeof(int) * 3];
+    int* triangle_buffer = (int*) trianglechar;
+    for (int i = 0; i < triangle.size(); i++){
+    	triangle_buffer[0] = triangle[i].p1;
+    	triangle_buffer[1] = triangle[i].p2;
+    	triangle_buffer[2] = triangle[i].p3;
+        ofs.write(trianglechar, sizeof(int) * 3);
+    }
+    ofs.close();
+}
+
+
 int triangulation(vector<vector<vector<double> > > &MAP){
     int HEIGHT, WIDTH, DEPTH;
     HEIGHT = MAP.size();
@@ -451,18 +551,21 @@ int triangulation(vector<vector<vector<double> > > &MAP){
     return 0;
 }
 
+
 int main()
 {
     string filename = "mapinput.txt";
 
     printf("Initializing input\n");
-    init(MAP, filename);
+//    init(MAP, filename);
+	bin_init(MAP, filename);
 
     printf("Computing triangulation\n");
     triangulation(MAP);
 
     printf("Writing output\n");
-    output();
+//    output();
+	bin_output();
 
     printf("Done\n");
     return 0;

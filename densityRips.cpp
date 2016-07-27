@@ -33,7 +33,7 @@ int main(int argc, char* argv[]){
 
 	cout << "Reading in simplicial complex...\n";
 	// 2D defined by edge. 3D defined by vertex.
-	K.buildComplexFromFile2(argv[1]); //<<<<<<<<<<< Change this if necessary [File: Triangle defined by edge][File2: by vertex]
+	K.buildComplexFromFile2_BIN(argv[1]); //<<<<<<<<<<< Change this if necessary [File: Triangle defined by edge][File2: by vertex]
 	//K.outputComplex("testcomplex0.txt");
 	cout << "Done\n";
 

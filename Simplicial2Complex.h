@@ -125,6 +125,7 @@ public:
 	void outputArcs(string, string);
 	void buildComplexFromFile(string pathname);
 	void buildComplexFromFile2(string pathname);
+	void buildComplexFromFile2_BIN(string pathname);
 	void buildComplexDiscrete(string, string, double);
 	void outputComplex(string pathname);
 	void buildPsuedoMorseFunction();
@@ -648,6 +649,85 @@ void Simplicial2Complex::buildComplexFromFile2(string pathname) {
 	cout << "\tDone." << endl;
 	file.close();
 }
+
+
+void Simplicial2Complex::buildComplexFromFile2_BIN(string pathname) {
+	ifstream file(pathname, ios::binary);
+	char* int_buffer = new char[sizeof(int)];
+	int* int_reader = (int*) int_buffer;
+	char* double_buffer = new char[sizeof(double)];
+	double* double_reader = (double*) double_buffer;
+	
+	
+	int numOfVertices;	
+	file.read(int_buffer, sizeof(int));
+	numOfVertices = *int_reader;	
+	cout << "\tReading " << numOfVertices << "vertices" << endl;
+
+	for (int i = 0; i < numOfVertices; i++) {
+		double coords[DIM];
+		double funcValue;
+		for (int j = 0; j < DIM; j++) {
+			file.read(double_buffer, sizeof(double));
+			coords[j] = *double_reader;
+		}
+		file.read(double_buffer, sizeof(double));
+		funcValue = *double_reader;
+		Vertex *v = new Vertex(coords, funcValue);
+		int vPosition = this->addVertex(v);
+		v->setVposition(vPosition);
+	}
+	cout << "\tDone." << endl;
+
+	int numOfEdges;
+	file.read(int_buffer, sizeof(int));
+	numOfEdges = *int_reader;
+	cout << "\tReading " << numOfEdges << "edges" << endl;
+	for (int i = 0; i < numOfEdges; i++) {
+		int vIndex1, vIndex2;
+		file.read(int_buffer, sizeof(int));
+		vIndex1 = *int_reader;
+		file.read(int_buffer, sizeof(int));
+		vIndex2 = *int_reader;
+		Vertex *v1 = this->getVertex(vIndex1);
+		Vertex *v2 = this->getVertex(vIndex2);
+		Edge *e = new Edge(v1, v2);
+		v1->addEdge(e);
+		v2->addEdge(e);
+		int ePosition = this->addEdge(e);
+		e->setEposition(ePosition);
+	}
+	cout << "\tDone." << endl;
+
+	int numOfTris;
+	file.read(int_buffer, sizeof(int));
+	numOfTris = *int_reader;
+	cout << "\tReading " << numOfTris << "triangles" << endl;
+	for (int i = 0; i < numOfTris; i++) {
+		int vIndex1, vIndex2, vIndex3;
+		file.read(int_buffer, sizeof(int));
+		vIndex1 = *int_reader;
+		file.read(int_buffer, sizeof(int));
+		vIndex2 = *int_reader;
+		file.read(int_buffer, sizeof(int));
+		vIndex3 = *int_reader;
+		Vertex *v1 = this->getVertex(vIndex1);
+		Vertex *v2 = this->getVertex(vIndex2);
+		Vertex *v3 = this->getVertex(vIndex3);
+		Triangle *t = new Triangle(v1, v2, v3);
+		Edge *e1 = get<0>(t->getEdges());
+		Edge *e2 = get<1>(t->getEdges());
+		Edge *e3 = get<2>(t->getEdges());
+		e1->addTriangle(t);
+		e2->addTriangle(t);
+		e3->addTriangle(t);
+		int tPosition = this->addTriangle(t);
+		t->setTposition(tPosition);
+	}
+	cout << "\tDone." << endl;
+	file.close();
+}
+
 
 /*
 void Simplicial2Complex::buildRipsComplex(double radius, double eps){

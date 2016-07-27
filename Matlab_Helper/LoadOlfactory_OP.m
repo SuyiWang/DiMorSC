@@ -1,7 +1,7 @@
 %%  This file loads Olfactory, Necrotical Layer 1 and Neuromuscular data
 %   Input:          path - default path
 %   Output:         tif file, fits file, txt file.
-%   Requirement:    create a folder named 'input' in current directory
+%   Requirement:    create a folder named 'inputs' in current directory
 %   Dependency:     TriangulationNew.m
 %
 %   Other files:    mapinput.txt vert.txt edge.txt triangle.txt
@@ -20,7 +20,7 @@
 
 
 %%  Loop over several data sets (if there is any)
-    for dataset = 1:1 % Olfactory data
+    for dataset = 1:9 % Olfactory data
 %   for dataset = 1:6 % Necrotical
 %   for dataset = 1:22 % Neuromuscular
 
@@ -66,7 +66,21 @@
 
 %%      Loop over all files of one dataset
         for k = 1:length(len)-2
-            disp(counter)
+%%          Show progress
+            lPrompt = 1; % use this for a licensed version
+            %lPrompt = 7; %use this for a trial version
+            dispstr = sprintf('Progress = %d / %d', k, length(len)-2);
+            if (k == 1)
+                disp(dispstr);
+            else
+%               char(8) is the ascii character for "backspace"
+%               dispay the require number of them
+                disp([char(8)*ones(1,lStr+lPrompt), dispstr]);        
+            end
+            lStr = length(dispstr);
+%           End of Show progress
+            
+            
             cnt = sprintf('%d', k);
             % cnt = sprintf('%3.3d', k);
             correspond(k) = counter;
@@ -76,13 +90,13 @@
             try
                 data = imread([path cnt '.tif']);
             catch
-                fprintf('%d does not exist\n', k);
+                warning('%d does not exist\n', k);
                 cnt = sprintf('%2.2d', k);
                 correspond(k) = counter;
                 try 
                     data = imread([path cnt '.tif']);
                 catch
-                    fprintf('%d REALLY does not exist\n', k);
+                    warning('%d REALLY does not exist\n', k);
                     continue;
                 end
             end
@@ -144,7 +158,8 @@
 %         fitswrite(imgdata,['Neocortical_G3_' int2str(dataset) '.fits']);
 %         fitswrite(imgdata,['Neuromuscular_G3_' int2str(dataset) '.fits']);
 %%      Create simplicial complex
-        TriangulationNew(imgdata, 'inputs/3D');
+        TriangulationNew(imgdata, ['inputs/Olfactory_OP_' int2str(dataset)]);
+        disp('***************DONE********************');
 end
 
 

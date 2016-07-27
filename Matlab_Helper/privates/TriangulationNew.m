@@ -18,7 +18,7 @@ function [vert, edge, triangles] = TriangulationNew(density_map, filename)
 
 %%  Truncate data using a threshold
     fprintf('Smoothing data...\n');
-    THD = 20;
+    THD = 10;
     thd_map = smooth3(density_map(:,:,:),'gaussian',[5 5 5], 1); 
     index = find(thd_map > THD);
 
@@ -31,29 +31,38 @@ function [vert, edge, triangles] = TriangulationNew(density_map, filename)
     fprintf('Preparing input...\n');
     len = length(index);
     vert = zeros(len, 4);
-    fp = fopen('mapinput.txt','w');
-%     for idx = 1:len
-%         [i j k] = ind2sub(size(density_map), index(idx));
-%         vert(idx,:) = [i j k density_map(i,j,k)];
-%     end
+%     fp = fopen('mapinput.txt','w');
+    fp = fopen('mapinput.bin','w');
+
     [I J K] = ind2sub(size(density_map), index);
     vert(:,:) = [I J K density_map(index)];
     mnk = size(density_map);
-    fprintf(fp, '%d %d %d %d\n', mnk(1), mnk(2), mnk(3), len);
-    fprintf(fp, '%d %d %d %f\n', vert');
+    
+    fwrite(fp, [mnk(1) mnk(2) mnk(3) len]', 'int32');
+    fwrite(fp, vert', 'double');
+%     fprintf(fp, '%d %d %d %d\n', mnk(1), mnk(2), mnk(3), len);
+%     fprintf(fp, '%d %d %d %f\n', vert');
     fclose(fp);
 
     
 %%  Triangulate - 1) do not fill the cube; 2) fill the cube interier with a tetrahedron
+    fprintf('Trianguating...\n');
     system('./test');
     % system('./test_fill');
 
     
 %%  Load output
     fprintf('Reading Vertices...\n');
-    vert = load('vert.txt');
+    fp = fopen('vert.bin','r');
+    vert = fread(fp, [4 inf], 'double')';
+    fclose(fp);
+    
+    
     fprintf('Reading Edges...\n');
-    edge = load('edge.txt');
+    fp = fopen('edge.bin','r');
+    edge = fread(fp, [2 inf], 'int32')';
+    fclose(fp);
+    
     
     fprintf('Processing Edges...\n');
     len = length(vert);    
@@ -63,7 +72,9 @@ function [vert, edge, triangles] = TriangulationNew(density_map, filename)
     edge = [I J];
     
     fprintf('Reading Triangles...\n');
-    triangles = load('triangle.txt');
+    fp = fopen('triangle.bin','r');
+    triangles = fread(fp, [3 inf], 'int32')';
+    fclose(fp);
     
     
 %%  Write input file for discrete morse

@@ -54,4 +54,4 @@ DrawGraph(Gadd, vert, 'k', 2);
 
 %% Generate files for vaa3D
 tt = Tree2SWCtt(G+Gadd, vert);
-save_v3d_swc_file(tt, 'OP_1_disperse.swc')
+save_v3d_swc_file(tt, 'Allen.swc')

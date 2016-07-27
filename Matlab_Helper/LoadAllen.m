@@ -22,7 +22,21 @@ for k = start:(start+len)
 % for k = 191:330
 
 
-    disp(counter)
+%%  Show progress
+    lPrompt = 1; % use this for a licensed version
+    %lPrompt = 7; %use this for a trial version
+    dispstr = sprintf('Progress = %d / %d', k, start+len);
+    if (k == start)
+        disp(dispstr);
+    else
+%   char(8) is the ascii character for "backspace"
+%   dispay the require number of them
+        disp([char(8)*ones(1,lStr+lPrompt), dispstr]);        
+    end
+    lStr = length(dispstr);
+%   End of Show progress
+
+
     cnt = sprintf('%3.3d', k);
     try
 %%      Search for particular type of input file
