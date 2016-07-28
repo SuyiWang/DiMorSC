@@ -1,4 +1,4 @@
-%%  This file loads Olfactory, Necrotical Layer 1 and Neuromuscular data
+%%  This file loads Olfactory data
 %   Input:          path - default path
 %   Output:         tif file, fits file, txt file.
 %   Requirement:    create a folder named 'inputs' in current directory
