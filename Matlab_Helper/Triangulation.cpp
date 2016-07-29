@@ -228,9 +228,7 @@ void bin_init(vector<vector<vector<double> > > &MAP, string filename){
 		j = floor(density_value[1] + 0.5);
 		k = floor(density_value[2] + 0.5);
         v = density_value[3];
-        if (DEBUG){
-        	printf("%d %d %d %f\n", i, j, k, v);
-        }
+
         i--;j--;k--;
         MAP[i][j][k] = v;
         rev_idx[i][j][k] = vertcount++;
@@ -551,6 +549,28 @@ int triangulation(vector<vector<vector<double> > > &MAP){
     return 0;
 }
 
+int triangulation_with_vertex(vector<vector<vector<double> > > &MAP){
+	TriangleHash th;
+	EdgeHash eh;
+
+    double THD = 1e-6;
+	int original_total = vertex.size();
+//    int counter = 0;
+    for(int v = 0; v < original_total; ++v){
+		int i, j, k;
+		i = vertex[v].x; j = vertex[v].y; k = vertex[v].z;
+		if (MAP[i][j][k] < THD) continue;
+		if ((i+j+k)%2==1){
+			triangle_cube(i, j, k, 0, th, eh);
+		}
+		else{
+			triangle_cube(i, j, k, 1, th, eh);
+		}
+    }
+    printf("Done\n");
+    return 0;
+}
+
 
 int main()
 {
@@ -561,7 +581,8 @@ int main()
 	bin_init(MAP, filename);
 
     printf("Computing triangulation\n");
-    triangulation(MAP);
+//  triangulation(MAP);
+	triangulation_with_vertex(MAP);
 
     printf("Writing output\n");
 //    output();
