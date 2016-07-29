@@ -19,10 +19,10 @@ function [vert, edge, triangles] = TriangulationNew(density_map, filename)
 %%  Truncate data using a threshold
     fprintf('Smoothing data...\n');
     THD = 10;
-    thd_map = smooth3(density_map(:,:,:),'gaussian',[5 5 5], 1); 
+    thd_map = smooth3(density_map(:,:,:),'gaussian',[5 5 3], 1); 
     index = find(thd_map > THD);
 
-    real_density_map = smooth3(density_map(:,:,:),'gaussian',[5 5 5]);
+    real_density_map = smooth3(density_map(:,:,:),'gaussian',[5 5 3]);
     density_map = zeros(size(real_density_map));
     density_map(index) = max(real_density_map(index), 1e-6);
 
