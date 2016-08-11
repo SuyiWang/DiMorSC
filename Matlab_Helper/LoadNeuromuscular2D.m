@@ -12,8 +12,8 @@
     clear all;
     addpath('privates');
 %   Neuromucsular data.
-%     default_path = '/media/My Passport/NeuronData/DIADEM/Neuromuscular Projection Fibers/Subset 2/Image Stacks- 16 bit Gray/';
-    default_path = 'H:/NeuronData/DIADEM/Neuromuscular Projection Fibers/Subset 2/Image Stacks- 16 bit Gray/';
+    default_path = '/media/My Passport/NeuronData/DIADEM/Neuromuscular Projection Fibers/Subset 2/Image Stacks- 16 bit Gray/';
+%     default_path = 'H:/NeuronData/DIADEM/Neuromuscular Projection Fibers/Subset 2/Image Stacks- 16 bit Gray/';
     
 %%  Read Translation information
     fp = fopen('supple_data/Neuromuscular_subset_2','r');

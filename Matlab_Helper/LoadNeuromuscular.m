@@ -12,12 +12,12 @@
     clear all;
     addpath('privates');
 %   Neuromucsular data.
-%     default_path = '/media/My Passport/NeuronData/DIADEM/Neuromuscular Projection Fibers/Subset 2/Image Stacks- 16 bit Gray/';
-    default_path = 'H:/NeuronData/DIADEM/Neuromuscular Projection Fibers/Subset 2/Image Stacks- 16 bit Gray/';
+    default_path = '/media/My Passport/NeuronData/DIADEM/Neuromuscular Projection Fibers/Subset 2/Image Stacks- 16 bit Gray/';
+%     default_path = 'H:/NeuronData/DIADEM/Neuromuscular Projection Fibers/Subset 2/Image Stacks- 16 bit Gray/';
     
 %%  Read Translation information
     fp = fopen('supple_data/Neuromuscular_subset_2','r');
-    DataNum = 30;
+    DataNum = 156;
     trans_info = zeros(DataNum, 2);
     for dataset = 1:DataNum
         linescan = fgetl(fp);
@@ -110,6 +110,7 @@
         end
     end
 %%  Write tif data
+    imgdata = imgdata(2000:2500, 3000:3500, :);
     disp('Writing tif data...');
     for i = 1:size(imgdata,3)
 %         image(imgdata(:,:,i));

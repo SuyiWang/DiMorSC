@@ -21,17 +21,8 @@
 
 %%  Loop over several data sets (if there is any)
     for dataset = 1:9 % Olfactory data
-%   for dataset = 1:6 % Necrotical
-%   for dataset = 1:22 % Neuromuscular
-
-
 %       olfactory data
         path = [default_path int2str(dataset) '/'];
-%       Necrotical Layer data.
-%       path = [default_path int2str(dataset) '/'];
-%       Neuromuscular data
-%       path_cnt = sprintf('%2.2d', dataset);
-%       path = [default_path path_cnt '/'];
 
 
         correspond = zeros(500,1);
@@ -100,7 +91,15 @@
                     continue;
                 end
             end
-
+%%          Downsampling data - this is usually uncessary
+%             tmp = zeros(256, 256);
+%             for i = 1:512
+%                 for j = 1:512
+%                     tmp(floor((i+1)/2),floor((j+1)/2)) = tmp(floor((i+1)/2),floor((j+1)/2)) + data(i,j)/4;
+%                 end
+%             end
+%             data = tmp;
+            
             
 %%          Remove low percentage data
 %             tmpimage = data;
@@ -112,7 +111,7 @@
 
 
 %%          truncate data, if necessary
-%             data = data(250:300, 140:180);
+%             data = data(150:350, 150:350);
 %%          preview density image
 %             image(uint8(data));
         
@@ -124,8 +123,6 @@
                 imgdata = zeros([size(data) length(len)-2]);  
                 imgdata(:,:, counter) = data;
                 imwrite(data,['Olfactory_OP' int2str(dataset) '.tif'])
-%                 imwrite(data,['Neocortical_' int2str(dataset) '.tif']);
-%                 imwrite(data,['Neuromuscular_' int2str(dataset) '.tif'])
 
 
 %%              diamorse input generation
@@ -138,8 +135,6 @@
             else
                 imgdata(:,:, counter) = data;
                 imwrite(data,['Olfactory_OP' int2str(dataset) '.tif'],'WriteMode','append');
-%                 imwrite(data,['Neocortical_' int2str(dataset)'.tif'],'WriteMode','append');
-%                 imwrite(data,['Neuromuscular_' int2str(dataset) '.tif'],'WriteMode','append');
 
 
 %%              diamorse input generation
@@ -151,12 +146,17 @@
 %                 system('mv test_new.pgm test.pgm');
             end
         end
+        
+        
 %%      Smooth data (if necessary - esp for DisPerSE)
 %         imgdata(:,:,:) = smooth3(imgdata,'gaussian',[3 3 3]);
-%         imgdata(imgdata<thd*100) = 0;
+%         imgdata(imgdata < 10) = 0;
+        
+        
 %%      Write fits file for DisPerSE
-%         fitswrite(imgdata,['Neocortical_G3_' int2str(dataset) '.fits']);
-%         fitswrite(imgdata,['Neuromuscular_G3_' int2str(dataset) '.fits']);
+%         fitswrite(imgdata,['Olfactory_OP_' int2str(dataset) '.fits']);
+
+        
 %%      Create simplicial complex
         TriangulationNew(imgdata, ['inputs/Olfactory_OP_' int2str(dataset)]);
         disp('***************DONE********************');

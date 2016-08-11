@@ -10,8 +10,8 @@
 %%  Data sets - Change this if necessary
     addpath('privates');
 %   Necrotical Layer data.
-%     default_path = '/media/My Passport/NeuronData/DIADEM/Neocortical Layer 1 Axons/Subset 1/Image Stacks/0';
-    default_path = 'H:\NeuronData\DIADEM\Neocortical Layer 1 Axons\Subset 1\Image Stacks\0';
+    default_path = '/media/My Passport/NeuronData/DIADEM/Neocortical Layer 1 Axons/Subset 1/Image Stacks/0';
+%     default_path = 'H:\NeuronData\DIADEM\Neocortical Layer 1 Axons\Subset 1\Image Stacks\0';
 
     
 %%  Read Translation information

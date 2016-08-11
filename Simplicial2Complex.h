@@ -82,8 +82,6 @@ public:
 	static bool simplexPointerCompare(const Simplex* s, const Simplex* t);
 	unsigned int filtrationPosition;
 	Simplex* prev = NULL;
-	int critical_type=0;
-	void set_type(int t){critical_type = t;}
 };
 
 class Simplicial2Complex{
@@ -849,7 +847,7 @@ void Simplicial2Complex::buildRipsComplex(double radius, double eps){
 //}
 
 void Simplicial2Complex::buildPsuedoMorseFunction(){
-	cout << "\t Processing edges\n";
+	cout << "\t Processing "<< edgeList.size() <<" edges\n";
 	for (unsigned int i = 0; i < this->edgeList.size(); i++){
 		Edge *e = this->edgeList.at(i);
 		tuple<Vertex*, Vertex*> vertices = e->getVertices();
@@ -865,7 +863,7 @@ void Simplicial2Complex::buildPsuedoMorseFunction(){
 		//cout<<"E: "<< max->getFuncValue() << " " << total << endl;
 	}
 
-	cout << "\t Processing triangles\n";
+	cout << "\t Processing "<< triList.size() <<" triangles\n";
 	for (unsigned int i = 0; i < this->triList.size(); i++){
 		Triangle *t = this->triList.at(i);
 		tuple<Edge*, Edge*, Edge*> edges = t->getEdges();

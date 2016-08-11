@@ -9,7 +9,10 @@
 
 %%  Read file info from input folder
 addpath('privates');
-path = '/media/My Passport/NeuronData/OSU_AllenAAVs/100141454/';
+addpath('matlab_bgl');
+% path = '/media/My Passport/NeuronData/OSU_AllenAAVs/100141454/';
+% path = '/media/My Passport/NeuronData/OSU_AllenAAVs/100141563/';
+path = '/media/My Passport/NeuronData/OSU_AllenAAVs/100141780/';
 dirpath = dir(path);
 fnames = {dirpath.name};
 
@@ -17,11 +20,10 @@ fnames = {dirpath.name};
 %%  Loop over files
 counter = 0;
 first = 1;
-start = 235; len = 10;
+% start = 191; len = 330 - 191;
+% start = 614; len = 753 - 614;
+start = 311; len = 449 - 311;
 for k = start:(start+len)
-% for k = 191:330
-
-
 %%  Show progress
     lPrompt = 1; % use this for a licensed version
     %lPrompt = 7; %use this for a trial version
@@ -40,8 +42,9 @@ for k = start:(start+len)
     cnt = sprintf('%3.3d', k);
     try
 %%      Search for particular type of input file
-%         pattern = ['PMD1229&1228-F\d+-\d{4}.\d{2}.\d{2}-\d{2}.\d{2}.\d{2}_PMD1228_\d{1}_' cnt '.jp2'];
-        pattern = ['102139' cnt '-projection.png'];
+%         pattern = ['102139' cnt '-projection.png'];
+%         pattern = ['102141' cnt '-projection.png'];
+        pattern = ['102152' cnt '-projection.png'];
         fileindex = regexp(fnames,pattern);
         if sum(~cellfun('isempty',fileindex))>1
             warning('More than one records found');
@@ -57,9 +60,14 @@ for k = start:(start+len)
     
     
 %%  All 3-dimension has same data, we pick one of them, truncate if necessary  
-    writedata = data(200:500,550:800,1);
+    writedata = data(:, :, 1);
+    writedata = rmv_boundary(writedata, [50 70]);
+%     subplot(2, 1, 1)
+%         image(writedata);
+%     subplot(2, 1, 2)
+%         image(data(:,:,1));
     
-    
+        
 %%  Append data    
     counter = counter + 1;
     if counter==1
@@ -73,3 +81,4 @@ for k = start:(start+len)
 end
 
 TriangulationNew(imgdata, 'inputs/Allen');
+clear imgdata;

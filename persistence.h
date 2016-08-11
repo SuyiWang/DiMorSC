@@ -132,7 +132,7 @@ void PersistencePairs::buildFiltration(){
 	this->filtration.insert(filtration.end(), K->tBegin(), K->tEnd());
 
 	/*Sort the simplices according to their function value (including symbolic perturbations)*/
-	cout << "\t sorting simplicies...\n";
+	cout << "\t sorting " << filtration.size() <<" simplicies...\n";
 	sort(filtration.begin(), filtration.end(), Simplex::simplexPointerCompare);
 	for (unsigned int i = 0; i < this->filtration.size(); i++){
 		Simplex *s = filtration[i];
@@ -204,7 +204,7 @@ void PersistencePairs::PhatPersistence(){
 	cout << "\tComputed and sorted!\n";
 	
 	// post processing: add sm-ms pairs, set critical points
-	cout << "\tCounting ms-pairs and sm-pairs...";
+	cout << "\tCounting total"<< pairs.get_num_pairs() <<" ms-pairs and sm-pairs...";
 	for( phat::index idx = 0; idx < pairs.get_num_pairs(); idx++ ){
 		Simplex *s1 = this->filtration[pairs.get_pair( idx ).first];
 		Simplex *s2 = this->filtration[pairs.get_pair( idx ).second];
@@ -214,8 +214,7 @@ void PersistencePairs::PhatPersistence(){
 			double persistence = e->funcValue - v->funcValue;
 			double symPerturb = e->getSymPerturb();
 			double loc_diff = e->filtrationPosition - v->filtrationPosition;
-			int c_type = 1;
-			e->set_type(c_type);
+
 			persistencePair01 pp = { v, e, persistence, symPerturb, loc_diff };
 			this->msPersistencePairs.push_back(pp);
 		}
@@ -227,8 +226,7 @@ void PersistencePairs::PhatPersistence(){
 							     - e->getSymPerturb();
 			double symPerturb2 = get<1>(t->getSymPerturb());
 			double loc_diff = t->filtrationPosition - e->filtrationPosition;
-			int c_type = 2;
-			e->set_type(c_type);
+
 			persistencePair12 pp = { e, t, persistence, symPerturb1,\
 									symPerturb2, loc_diff };
 			this->smPersistencePairs.push_back(pp);
@@ -371,8 +369,7 @@ void PersistencePairs::computePersistencePairsWithClear(){
 						double persistence = e->funcValue - v->funcValue;
 						double symPerturb = e->getSymPerturb();
 						double loc_diff = e->filtrationPosition - v->filtrationPosition;
-						int c_type = 1;
-						e->set_type(c_type);
+
 						persistencePair01 pp = { v, e, persistence, symPerturb, loc_diff };
 						this->msPersistencePairs.push_back(pp);
 					}
@@ -383,8 +380,7 @@ void PersistencePairs::computePersistencePairsWithClear(){
 						double symPerturb1 = get<0>(t->getSymPerturb()) - e->getSymPerturb();
 						double symPerturb2 = get<1>(t->getSymPerturb());
 						double loc_diff = t->filtrationPosition - e->filtrationPosition;
-						int c_type = 2;
-						e->set_type(c_type);
+
 						persistencePair12 pp = { e, t, persistence, symPerturb1, symPerturb2, loc_diff };
 						this->smPersistencePairs.push_back(pp);
 					}
@@ -747,10 +743,14 @@ void PersistencePairs::cancelAlongVPath(vector<Simplex*>* VPath){
 void PersistencePairs::cancelPersistencePairs(double delta){
 
 
-	cout << "\tSorting persistence pairs...\n";
+	cout << "\tSorting "<< msPersistencePairs.size() << " ms-persistence pairs...\n";
+	cout.flush();
 	sort(msPersistencePairs.begin(), msPersistencePairs.end(), PersistencePairs::persistencePairCompare01);
+	cout << "\tSorting "<< smPersistencePairs.size() << " sm-persistence pairs...\n";
+	cout.flush();
 	sort(smPersistencePairs.begin(), smPersistencePairs.end(), PersistencePairs::persistencePairCompare12);
 	cout << "\tDone\n";
+	cout.flush();
 
 	if (DEBUG) this->outputPersistencePairs("persistencePairs.txt");
 

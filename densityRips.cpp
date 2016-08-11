@@ -1,4 +1,4 @@
-#define DEBUG 1
+#define DEBUG 0
 
 #include "persistence.h"
 //#include "bitmap_image.hpp"
@@ -36,6 +36,7 @@ int main(int argc, char* argv[]){
 	K.buildComplexFromFile2_BIN(argv[1]); //<<<<<<<<<<< Change this if necessary [File: Triangle defined by edge][File2: by vertex]
 	//K.outputComplex("testcomplex0.txt");
 	cout << "Done\n";
+	cout.flush();
 
 	K.flipAndTranslateVertexFunction();
 
@@ -43,11 +44,13 @@ int main(int argc, char* argv[]){
 	cout << "Building pseudo-Morse function...\n";
 	K.buildPsuedoMorseFunction();
 	cout << "Done\n";
+	cout.flush();
 
 	PersistencePairs P(&K);
 	cout << "Building filtration...\n";
 	P.buildFiltration();
 	cout << "Done\n";
+	cout.flush();
 	
 	if (DEBUG){
 		ofstream filtration("filtration.txt", ios_base::out | ios_base::trunc);
@@ -72,6 +75,7 @@ int main(int argc, char* argv[]){
 	cout << "Computing persistence pairs...\n";
 	P.PhatPersistence();
 	cout << "Done!\n";
+	cout.flush();
 	
 	if (DEBUG){
 		cout << "Outputing persistence pairs...\n";
@@ -82,6 +86,7 @@ int main(int argc, char* argv[]){
 	cout << "Cancelling persistence pairs...\n";
 	P.cancelPersistencePairs(atof(argv[4]));
 	cout << "Done\n";
+	cout.flush();
 
 	K.outputArcs(argv[2], argv[3]);
 }

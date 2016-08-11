@@ -13,7 +13,7 @@ addpath('matlab_bgl');
 
 %%  Read in graph file
 figure;
-[vert, G] = Draw1stable('inputs/outvert.txt','inputs/outedge.txt');
+[vert, G] = Draw1stable('inputs/outvert_1000.txt','inputs/outedge_1000.txt');
 DrawGraph(G, vert, 'r', 2);
 
 
@@ -54,4 +54,5 @@ DrawGraph(Gadd, vert, 'k', 2);
 
 %% Generate files for vaa3D
 tt = Tree2SWCtt(G+Gadd, vert);
-save_v3d_swc_file(tt, 'Allen.swc')
+% save_v3d_swc_file(tt, 'Allen.swc')
+save_v3d_swc_file(tt, 'Partha.swc')

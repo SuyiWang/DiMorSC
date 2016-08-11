@@ -91,7 +91,7 @@ G = sparse(I+1, J+1, ones(length(I),1), length(points), length(points));
 
 [G, vert, mergemap, idx] = mergeduplicate(G, points');
 
-for i = 3:12
+for i = 3:9
     value{i} = value{i}(idx);
 end
 % vertices = vertices+1;

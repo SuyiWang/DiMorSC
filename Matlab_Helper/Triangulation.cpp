@@ -35,6 +35,7 @@ class cp{
 		}
 };
 
+
 // Triangle pair
 struct tp{
 	public:
@@ -46,15 +47,23 @@ struct tp{
 		}
 };
 
+
+//	Tetrahedron pair: if need this, uncomment all lines with tetra
+struct tetra{
+	vector<int> p{-1, -1, -1, -1};
+};
+
 vector<point> vertex;
 vector<cp> edge;
 vector<tp> triangle;
+// vector<tetra> tetrahedron;
 
 int vertcount = 1;
 vector<vector<vector<int> > > rev_idx;
 
-vector<vector<vector<double> > > MAP;
-	// Density map stored in 3D array
+// vector<vector<vector<double> > > MAP;
+// Density map stored in 3D array
+int HEIGHT, WIDTH, DEPTH, LENGTH;
 	
 class EdgeHash{
 	// Assume vertex are given in ascending order
@@ -137,50 +146,9 @@ class TriangleHash{
 };
 
 
-void init(vector<vector<vector<double> > > &MAP, string filename){
-    FILE* fp = fopen(filename.c_str(), "r");
-    int HEIGHT, WIDTH, DEPTH, LENGTH;
-
-    printf("Preparing density matrix\n");
-    fscanf(fp, "%d %d %d %d", &HEIGHT, &WIDTH, &DEPTH, &LENGTH);
-
-	// HEIGHT = HEIGHT + 1; WIDTH = WIDTH + 1; LENGTH = LENGTH + 1;
-	
-    MAP.clear();
-    rev_idx.clear();
-
-    for (int i = 0; i < HEIGHT; ++i) {
-        // DIM 2
-        vector<vector<double> > tmp2dd;
-        vector<vector<int> > tmp2di;
-        MAP.push_back(tmp2dd);
-        rev_idx.push_back(tmp2di);
-        for (int j = 0; j < WIDTH; ++j){
-            // DIM 3
-            MAP[i].push_back(vector<double>(DEPTH, 0));
-            rev_idx[i].push_back(vector<int>(DEPTH, 0));
-        }
-    }
-
-    printf("Reading density matrix: total %d Lines\n", LENGTH);
-    for (int len = 0; len < LENGTH; len++){
-        if (DEBUG&&len%10000 == 0)
-            printf("%d\n", len);
-        int i, j, k;
-        double v;
-        fscanf(fp, "%d %d %d %lf", &i, &j, &k, &v);
-        i--;j--;k--;
-        MAP[i][j][k] = v;
-        rev_idx[i][j][k] = vertcount++;
-        point p;
-        p.x = i; p.y = j; p.z = k; p.v = v;
-        vertex.push_back(p);
-    }
-    fclose(fp);
-    printf("done\n");
-}
-
-void bin_init(vector<vector<vector<double> > > &MAP, string filename){
+void bin_init(string filename){
+	vertex.clear(); edge.clear(); triangle.clear(); 
+	// tetrahedron.clear();
     ifstream binaryIO;
     binaryIO.open("mapinput.bin", ios::binary);
     if (!binaryIO.is_open()){
@@ -189,7 +157,7 @@ void bin_init(vector<vector<vector<double> > > &MAP, string filename){
     }
     
     char* header_data = new char[sizeof(int) * 4];
-    int HEIGHT, WIDTH, DEPTH, LENGTH;
+    
     binaryIO.read(header_data, sizeof(int) * 4);
 	int* header_value = (int*) header_data;
 	HEIGHT = header_value[0];
@@ -197,19 +165,15 @@ void bin_init(vector<vector<vector<double> > > &MAP, string filename){
 	DEPTH = header_value[2];
 	LENGTH = header_value[3];
 
-    printf("Preparing density matrix %d-%d-%d\n", HEIGHT, WIDTH, DEPTH);
+    printf("Preparing rev-index matrix %d-%d-%d\n", HEIGHT, WIDTH, DEPTH);
 	
-    MAP.clear();
     rev_idx.clear();	
     for (int i = 0; i < HEIGHT; ++i) {
         // DIM 2
-        vector<vector<double> > tmp2dd;
         vector<vector<int> > tmp2di;
-        MAP.push_back(tmp2dd);
         rev_idx.push_back(tmp2di);
         for (int j = 0; j < WIDTH; ++j){
             // DIM 3
-            MAP[i].push_back(vector<double>(DEPTH, 0));
             rev_idx[i].push_back(vector<int>(DEPTH, 0));
         }
     }
@@ -230,7 +194,6 @@ void bin_init(vector<vector<vector<double> > > &MAP, string filename){
         v = density_value[3];
 
         i--;j--;k--;
-        MAP[i][j][k] = v;
         rev_idx[i][j][k] = vertcount++;
         point p;
         p.x = i; p.y = j; p.z = k; p.v = v;
@@ -241,12 +204,6 @@ void bin_init(vector<vector<vector<double> > > &MAP, string filename){
 }
 
 int triangle_cube(int i, int j, int k, int AB, TriangleHash &th, EdgeHash &eh){
-    int HEIGHT, WIDTH, DEPTH;
-	
-    HEIGHT = MAP.size();
-    WIDTH  = MAP[0].size();
-    DEPTH  = MAP[0][0].size();
-	
     if (AB == 0){ // triangles of Type A
         int TypeAtri[3*16][3] = {{0,0,0}, {1,0,1}, {0,0,1},
                           {0,0,0}, {1,0,0}, {1,0,1},
@@ -265,6 +222,7 @@ int triangle_cube(int i, int j, int k, int AB, TriangleHash &th, EdgeHash &eh){
                           {1,1,0}, {1,0,1}, {0,1,1},
                           {0,0,0}, {1,1,0}, {0,1,1}
                    };
+		int flag = 1;
         for (int cnt = 0; cnt<nb; cnt++){
             if ((i + TypeAtri[cnt*3][0]>=HEIGHT)||
                 (i + TypeAtri[cnt*3+1][0]>=HEIGHT)||
@@ -275,83 +233,96 @@ int triangle_cube(int i, int j, int k, int AB, TriangleHash &th, EdgeHash &eh){
                 (k + TypeAtri[cnt*3][2]>=DEPTH)||
                 (k + TypeAtri[cnt*3+1][2]>=DEPTH)||
                 (k + TypeAtri[cnt*3+2][2]>=DEPTH)){
-                   continue;
+                    flag = 0;
+                    continue;
                }
-//
-//            dens1 = MAP[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]];
-//            dens2 = MAP[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]];
-//            dens3 = MAP[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]];
-//            if (dens1>THD && dens2 > THD && dens3 >THD){
-                int sub1, sub2, sub3;
-                if (rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]] <= 0){
-                    rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]] = vertcount++;
-                    point p;
-                    p.x = i+TypeAtri[cnt*3][0]; p.y = j+TypeAtri[cnt*3][1]; p.z = k+TypeAtri[cnt*3][2]; p.v = 1e-6;
-                    vertex.push_back(p);
-                    sub1 = rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]];
-                }
-                else{
-                    sub1 = rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]];
-                }
 
-                if (rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]] <= 0){
-                    rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]] = vertcount++;
-                    point p;
-                    p.x = i+TypeAtri[cnt*3+1][0]; p.y = j+TypeAtri[cnt*3+1][1]; p.z = k+TypeAtri[cnt*3+1][2]; p.v = 1e-6;
-                    vertex.push_back(p);
-                    sub2 = rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]];
-                }
-                else{
-                    sub2 = rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]];
-                }
+            int sub1, sub2, sub3;
+            if (rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]] <= 0){
+                rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]] = vertcount++;
+                point p;
+                p.x = i+TypeAtri[cnt*3][0]; p.y = j+TypeAtri[cnt*3][1]; p.z = k+TypeAtri[cnt*3][2]; p.v = 1e-6;
+                vertex.push_back(p);
+                sub1 = rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]];
+            }
+            else{
+                sub1 = rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]];
+            }
 
-                if (rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]]<=0){
-                    rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]] = vertcount++;
-                    point p;
-                    p.x = i+TypeAtri[cnt*3+2][0]; p.y = j+TypeAtri[cnt*3+2][1]; p.z = k+TypeAtri[cnt*3+2][2]; p.v = 1e-6;
-                    vertex.push_back(p);
-                    sub3 = rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]];
-                }
-                else{
-                    sub3 = rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]];
-                }
-                tp new_triangle;
-                new_triangle.p1 = sub1; new_triangle.p2 = sub2; new_triangle.p3 = sub3;
-				new_triangle.Reorder();
-				if (!th.HasTriangle(new_triangle)){
-					triangle.push_back(new_triangle);
-					th.InsertTriangle(new_triangle);
-				}
+            if (rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]] <= 0){
+                rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]] = vertcount++;
+                point p;
+                p.x = i+TypeAtri[cnt*3+1][0]; p.y = j+TypeAtri[cnt*3+1][1]; p.z = k+TypeAtri[cnt*3+1][2]; p.v = 1e-6;
+                vertex.push_back(p);
+                sub2 = rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]];
+            }
+            else{
+                sub2 = rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]];
+            }
 
-                cp new_edge1;
-                new_edge1.p1 = sub1; new_edge1.p2 = sub2;
-				new_edge1.Reorder();
-                cp new_edge2;
-                new_edge2.p1 = sub1; new_edge2.p2 = sub3;
-				new_edge2.Reorder();
-                cp new_edge3;
-                new_edge3.p1 = sub2; new_edge3.p2 = sub3;
-				new_edge3.Reorder();
+            if (rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]]<=0){
+                rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]] = vertcount++;
+                point p;
+                p.x = i+TypeAtri[cnt*3+2][0]; p.y = j+TypeAtri[cnt*3+2][1]; p.z = k+TypeAtri[cnt*3+2][2]; p.v = 1e-6;
+                vertex.push_back(p);
+                sub3 = rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]];
+            }
+            else{
+                sub3 = rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]];
+            }
+            tp new_triangle;
+            new_triangle.p1 = sub1; new_triangle.p2 = sub2; new_triangle.p3 = sub3;
+			new_triangle.Reorder();
+			if (!th.HasTriangle(new_triangle)){
+				triangle.push_back(new_triangle);
+				th.InsertTriangle(new_triangle);
+			}
 
-                if (DEBUG){
-                    printf("%d %d %d\n", sub1, sub2, sub3);
-                }
+            cp new_edge1;
+            new_edge1.p1 = sub1; new_edge1.p2 = sub2;
+			new_edge1.Reorder();
+            cp new_edge2;
+            new_edge2.p1 = sub1; new_edge2.p2 = sub3;
+			new_edge2.Reorder();
+            cp new_edge3;
+            new_edge3.p1 = sub2; new_edge3.p2 = sub3;
+			new_edge3.Reorder();
 
-                if (!eh.HasEdge(new_edge1)){
-					edge.push_back(new_edge1);
-					eh.InsertEdge(new_edge1);
-				}
-				if (!eh.HasEdge(new_edge2)){
-					edge.push_back(new_edge2);
-					eh.InsertEdge(new_edge2);
-				}
-				if (!eh.HasEdge(new_edge3)){
-					edge.push_back(new_edge3);
-					eh.InsertEdge(new_edge3);
-				}
-//                nonempty(cnt) = 1;
-//            }
+            if (DEBUG){
+                printf("%d %d %d\n", sub1, sub2, sub3);
+            }
+
+            if (!eh.HasEdge(new_edge1)){
+				edge.push_back(new_edge1);
+				eh.InsertEdge(new_edge1);
+			}
+			if (!eh.HasEdge(new_edge2)){
+				edge.push_back(new_edge2);
+				eh.InsertEdge(new_edge2);
+			}
+			if (!eh.HasEdge(new_edge3)){
+				edge.push_back(new_edge3);
+				eh.InsertEdge(new_edge3);
+			}
         }
+        
+        /*
+        int Type4D[4 * 5][3] = {{0,0,0}, {0,0,1}, {1,0,1}, {0,1,1},
+        						{0,0,0}, {1,0,0}, {1,0,1}, {1,1,0},
+        						{0,1,1}, {0,0,0}, {1,1,0}, {0,1,0},
+        						{0,1,1}, {1,0,1}, {1,1,0}, {1,1,1},
+        						{0,1,1}, {1,0,1}, {1,1,0}, {0,0,0}
+        						};
+        for (int cnt = 0; cnt < 5; ++cnt){
+        	if (!flag) break;
+        	tetra tmp;
+        	for (int vert_id = 0; vert_id < 4; ++vert_id){
+        		tmp.p[vert_id] = rev_idx[i + Type4D[cnt * 4 + vert_id][0]]
+        								[j + Type4D[cnt * 4 + vert_id][1]]
+        								[k + Type4D[cnt * 4 + vert_id][2]];
+        	}
+        	tetrahedron.push_back(tmp);
+        }*/
     }
     else{// 10 triangles of Type B
         int TypeAtri[3*16][3] = {{0,0,0}, {0,0,1}, {0,1,0},
@@ -371,6 +342,7 @@ int triangle_cube(int i, int j, int k, int AB, TriangleHash &th, EdgeHash &eh){
                                {0,0,1}, {1,1,1}, {1,0,0},
                                {0,0,1}, {1,1,1}, {0,1,0}
                                };
+		int flag = 1;
         for (int cnt = 0; cnt<nb; cnt++){
             if ((i + TypeAtri[cnt*3][0]>=HEIGHT)||
                 (i + TypeAtri[cnt*3+1][0]>=HEIGHT)||
@@ -381,106 +353,100 @@ int triangle_cube(int i, int j, int k, int AB, TriangleHash &th, EdgeHash &eh){
                 (k + TypeAtri[cnt*3][2]>=DEPTH)||
                 (k + TypeAtri[cnt*3+1][2]>=DEPTH)||
                 (k + TypeAtri[cnt*3+2][2]>=DEPTH)){
-                   continue;
+                    flag = 0;
+               	    continue;
                }
-                int sub1, sub2, sub3;
-//
-//            dens1 = MAP[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]];
-//            dens2 = MAP[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]];
-//            dens3 = MAP[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]];
-//            if (dens1>THD && dens2 > THD && dens3 >THD){
-                if (rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]] <= 0){
-                    rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]] = vertcount++;
-                    point p;
-                    p.x = i+TypeAtri[cnt*3][0]; p.y = j+TypeAtri[cnt*3][1]; p.z = k+TypeAtri[cnt*3][2]; p.v = 1e-6;
-                    vertex.push_back(p);
-                    sub1 = rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]];
-                }
-                else{
-                    sub1 = rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]];
-                }
+                
+                
+            int sub1, sub2, sub3;
+            if (rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]] <= 0){
+                rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]] = vertcount++;
+                point p;
+                p.x = i+TypeAtri[cnt*3][0]; p.y = j+TypeAtri[cnt*3][1]; p.z = k+TypeAtri[cnt*3][2]; p.v = 1e-6;
+                vertex.push_back(p);
+                sub1 = rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]];
+            }
+            else{
+                sub1 = rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]];
+            }
 
-                if (rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]] <= 0){
-                    rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]] = vertcount++;
-                    point p;
-                    p.x = i+TypeAtri[cnt*3+1][0]; p.y = j+TypeAtri[cnt*3+1][1]; p.z = k+TypeAtri[cnt*3+1][2]; p.v = 1e-6;
-                    vertex.push_back(p);
-                    sub2 = rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]];
-                }
-                else{
-                    sub2 = rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]];
-                }
+            if (rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]] <= 0){
+                rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]] = vertcount++;
+                point p;
+                p.x = i+TypeAtri[cnt*3+1][0]; p.y = j+TypeAtri[cnt*3+1][1]; p.z = k+TypeAtri[cnt*3+1][2]; p.v = 1e-6;
+                vertex.push_back(p);
+                sub2 = rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]];
+            }
+            else{
+                sub2 = rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]];
+            }
 
-                if (rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]]<=0){
-                    rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]] = vertcount++;
-                    point p;
-                    p.x = i+TypeAtri[cnt*3+2][0]; p.y = j+TypeAtri[cnt*3+2][1]; p.z = k+TypeAtri[cnt*3+2][2]; p.v = 1e-6;
-                    vertex.push_back(p);
-                    sub3 = rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]];
-                }
-                else{
-                    sub3 = rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]];
-                }
-                tp new_triangle;
-                new_triangle.p1 = sub1; new_triangle.p2 = sub2; new_triangle.p3 = sub3;
-				new_triangle.Reorder();
-                if (!th.HasTriangle(new_triangle)){
-					triangle.push_back(new_triangle);
-					th.InsertTriangle(new_triangle);
-				}
+            if (rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]]<=0){
+                rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]] = vertcount++;
+                point p;
+                p.x = i+TypeAtri[cnt*3+2][0]; p.y = j+TypeAtri[cnt*3+2][1]; p.z = k+TypeAtri[cnt*3+2][2]; p.v = 1e-6;
+                vertex.push_back(p);
+                sub3 = rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]];
+            }
+            else{
+                sub3 = rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]];
+            }
+            tp new_triangle;
+            new_triangle.p1 = sub1; new_triangle.p2 = sub2; new_triangle.p3 = sub3;
+			new_triangle.Reorder();
+            if (!th.HasTriangle(new_triangle)){
+				triangle.push_back(new_triangle);
+				th.InsertTriangle(new_triangle);
+			}
 
-                cp new_edge1;
-                new_edge1.p1 = sub1; new_edge1.p2 = sub2;
-				new_edge1.Reorder();
-                cp new_edge2;
-                new_edge2.p1 = sub1; new_edge2.p2 = sub3;
-				new_edge2.Reorder();
-                cp new_edge3;
-                new_edge3.p1 = sub2; new_edge3.p2 = sub3;
-				new_edge3.Reorder();
+            cp new_edge1;
+            new_edge1.p1 = sub1; new_edge1.p2 = sub2;
+			new_edge1.Reorder();
+            cp new_edge2;
+            new_edge2.p1 = sub1; new_edge2.p2 = sub3;
+			new_edge2.Reorder();
+            cp new_edge3;
+            new_edge3.p1 = sub2; new_edge3.p2 = sub3;
+			new_edge3.Reorder();
 
-                if (DEBUG){
-                    printf("%d %d %d\n", sub1, sub2, sub3);
-                }
+            if (DEBUG){
+                printf("%d %d %d\n", sub1, sub2, sub3);
+            }
 
 
-                if (!eh.HasEdge(new_edge1)){
-					edge.push_back(new_edge1);
-					eh.InsertEdge(new_edge1);
-				}
-				if (!eh.HasEdge(new_edge2)){
-					edge.push_back(new_edge2);
-					eh.InsertEdge(new_edge2);
-				}
-				if (!eh.HasEdge(new_edge3)){
-					edge.push_back(new_edge3);
-					eh.InsertEdge(new_edge3);
-				}
-//                nonempty(cnt) = 1;
-//            }
+            if (!eh.HasEdge(new_edge1)){
+				edge.push_back(new_edge1);
+				eh.InsertEdge(new_edge1);
+			}
+			if (!eh.HasEdge(new_edge2)){
+				edge.push_back(new_edge2);
+				eh.InsertEdge(new_edge2);
+			}
+			if (!eh.HasEdge(new_edge3)){
+				edge.push_back(new_edge3);
+				eh.InsertEdge(new_edge3);
+			}
         }
+        
+        /*
+        int Type4D[4 * 5][3] = {{0,0,0}, {1,0,0}, {0,1,0}, {0,0,1},
+        						{0,1,0}, {1,0,0}, {1,1,0}, {1,1,1},
+        						{0,1,0}, {1,1,1}, {0,0,1}, {0,1,1},
+        						{0,0,1}, {1,0,1}, {1,1,1}, {1,0,0},
+        						{0,0,1}, {1,1,1}, {0,1,0}, {1,0,0}
+        						};
+        for (int cnt = 0; cnt < 5; ++cnt){
+        	if (!flag) break;
+        	tetra tmp;
+        	for (int vert_id = 0; vert_id < 4; ++vert_id){
+        		tmp.p[vert_id] = rev_idx[i + Type4D[cnt * 4 + vert_id][0]]
+        								[j + Type4D[cnt * 4 + vert_id][1]]
+        								[k + Type4D[cnt * 4 + vert_id][2]];
+        	}
+        	tetrahedron.push_back(tmp);
+        }*/
     }
     return 0;
-}
-
-void output(){
-    FILE* fp = fopen("vert.txt","w");
-    printf("writing vertex\n");
-    for (int i = 0; i < vertex.size(); i++)
-        fprintf(fp, "%f %f %f %f\n", vertex[i].x, vertex[i].y, vertex[i].z, vertex[i].v);
-    fclose(fp);
-
-    printf("writing edge\n");
-    fp = fopen("edge.txt","w");
-    for (int i = 0; i < edge.size(); i++)
-        fprintf(fp, "%d %d\n", edge[i].p1, edge[i].p2);
-    fclose(fp);
-
-    printf("writing triangle\n");
-    fp = fopen("triangle.txt","w");
-    for (int i = 0; i < triangle.size(); i++)
-        fprintf(fp, "%d %d %d\n", triangle[i].p1, triangle[i].p2, triangle[i].p3);
-    fclose(fp);
 }
 
 
@@ -517,39 +483,23 @@ void bin_output(){
         ofs.write(trianglechar, sizeof(int) * 3);
     }
     ofs.close();
+    
+    
+    /*
+    ofs.open("tetrahedron.bin", ios::binary);
+    printf("writing tetrahedron\n");
+    char* tetchar = new char[sizeof(int) * 4];
+    int* tet_buffer = (int*) tetchar;
+    for (int i = 0; i < tetrahedron.size(); i++){
+		for (int j = 0; j < 4; ++j)
+			tet_buffer[j] = tetrahedron[i].p[j];
+        ofs.write(tetchar, sizeof(int) * 4);
+    }
+    ofs.close();*/
 }
 
 
-int triangulation(vector<vector<vector<double> > > &MAP){
-    int HEIGHT, WIDTH, DEPTH;
-    HEIGHT = MAP.size();
-    WIDTH  = MAP[0].size();
-    DEPTH  = MAP[0][0].size();
-	
-	TriangleHash th;
-	EdgeHash eh;
-
-    double THD = 1e-6;
-//    int counter = 0;
-    for(int i = 0; i<HEIGHT; i++)
-        for(int j = 0; j<WIDTH; j++)
-            for(int k = 0; k<DEPTH; k++){
-                if (MAP[i][j][k] < THD) continue;
-                //printf("%d %f\n", rev_idx[i][j][k], MAP[i][j][k]);
-                if ((i+j+k)%2==1){
-                    triangle_cube(i, j, k, 0, th, eh);
-                }
-                else{
-                    triangle_cube(i, j, k, 1, th, eh);
-                }
-//                counter ++;
-//                if (counter % 1000 ==0) printf("%d\n", counter);
-            }
-    printf("Done\n");
-    return 0;
-}
-
-int triangulation_with_vertex(vector<vector<vector<double> > > &MAP){
+int triangulation_with_vertex(){
 	TriangleHash th;
 	EdgeHash eh;
 
@@ -557,9 +507,9 @@ int triangulation_with_vertex(vector<vector<vector<double> > > &MAP){
 	int original_total = vertex.size();
 //    int counter = 0;
     for(int v = 0; v < original_total; ++v){
-		int i, j, k;
-		i = vertex[v].x; j = vertex[v].y; k = vertex[v].z;
-		if (MAP[i][j][k] < THD) continue;
+		int i, j, k, val;
+		i = vertex[v].x; j = vertex[v].y; k = vertex[v].z; val = vertex[v].v;
+		if (val < THD) continue;
 		if ((i+j+k)%2==1){
 			triangle_cube(i, j, k, 0, th, eh);
 		}
@@ -577,15 +527,12 @@ int main()
     string filename = "mapinput.txt";
 
     printf("Initializing input\n");
-//    init(MAP, filename);
-	bin_init(MAP, filename);
+	bin_init(filename);
 
     printf("Computing triangulation\n");
-//  triangulation(MAP);
-	triangulation_with_vertex(MAP);
+	triangulation_with_vertex();
 
     printf("Writing output\n");
-//    output();
 	bin_output();
 
     printf("Done\n");
