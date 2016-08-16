@@ -27,7 +27,7 @@ function [vert, g] = Draw1stable(vertname, edgename, clr)
     vert = load(vertname);
     edge = load(edgename);
 %     sometimes need swap first two dimensions
-    vert(:,[1,2]) = vert(:,[2,1]);
+%     vert(:,[1,2]) = vert(:,[2,1]);
 
 
 %%  Create adjacency graph

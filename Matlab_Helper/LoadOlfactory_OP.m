@@ -92,13 +92,13 @@
                 end
             end
 %%          Downsampling data - this is usually uncessary
-%             tmp = zeros(256, 256);
-%             for i = 1:512
-%                 for j = 1:512
-%                     tmp(floor((i+1)/2),floor((j+1)/2)) = tmp(floor((i+1)/2),floor((j+1)/2)) + data(i,j)/4;
-%                 end
-%             end
-%             data = tmp;
+            tmp = zeros(256, 256);
+            for i = 1:512
+                for j = 1:512
+                    tmp(floor((i+1)/2),floor((j+1)/2)) = tmp(floor((i+1)/2),floor((j+1)/2)) + data(i,j)/4;
+                end
+            end
+            data = tmp;
             
             
 %%          Remove low percentage data
@@ -158,7 +158,12 @@
 
         
 %%      Create simplicial complex
-        TriangulationNew(imgdata, ['inputs/Olfactory_OP_' int2str(dataset)]);
+        clear data; clear writedata;
+
+        PreTriangulation(imgdata);
+        clear imgdata;
+
+        Triangulate(['inputs/Olfactory_OP_' int2str(dataset)], 0);
         disp('***************DONE********************');
 end
 

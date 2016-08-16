@@ -16,12 +16,12 @@
 function vert = PreTriangulation(density_map)
 %%  Truncate data using a threshold
     fprintf('Smoothing data...\n');
-    THD = 0.1;
-    thd_map = smooth3(density_map(:,:,:),'gaussian',[9 9 5]); 
+    THD = -1e-6;
+    thd_map = smooth3(density_map(:,:,:),'gaussian',[7 7 5]); 
     index = find(thd_map > THD);
     clear thd_map;
 
-    real_density_map = smooth3(density_map(:,:,:),'gaussian',[5 5 3]);
+    real_density_map = smooth3(density_map(:,:,:),'gaussian',[7 7 5]);
     density_map = zeros(size(real_density_map));
     density_map(index) = max(real_density_map(index), 1e-6);
     clear real_density_map;

@@ -49,7 +49,7 @@ class PersistencePairs{
 	/*ms: min-saddle or 0-1
 	  sm: saddle-max or 1-2*/
 	vector<persistencePair01> msPersistencePairs;
-	vector<persistencePair12> smPersistencePairs;
+	vector<persistencePair12*> smPersistencePairs;
 
 public:
 	vector<Simplex*> filtration;
@@ -66,26 +66,23 @@ public:
 			return false;
 		}
 	}
-	static bool persistencePairCompare(const persistencePair01& p, const persistencePair12& q){
-		return p.persistence <= q.persistence;
-	}
-	static bool persistencePairCompare12(const persistencePair12& p, const persistencePair12& q){
-		if(p.persistence < q.persistence){
+	
+	
+	static bool persistencePairCompare12(const persistencePair12* p, const persistencePair12* q){
+		if(p->persistence < q->persistence){
 			return true;
-		} else if (fabs(p.persistence - q.persistence) < 1e-8 && p.symPerturb1 < q.symPerturb1){
+		} else if (fabs(p->persistence - q->persistence) < 1e-8 && p->symPerturb1 < q->symPerturb1){
 			return true;
-		} else if (fabs(p.persistence - q.persistence) < 1e-8 && fabs(p.symPerturb1 - q.symPerturb1) < 1e-8 && p.symPerturb2 < q.symPerturb2){
+		} else if (fabs(p->persistence - q->persistence) < 1e-8 && fabs(p->symPerturb1 - q->symPerturb1) < 1e-8 && p->symPerturb2 < q->symPerturb2){
 			return true;
-		} else if (fabs(p.persistence - q.persistence) < 1e-8 && fabs(p.symPerturb1 - q.symPerturb1) < 1e-8 && fabs(p.symPerturb2 - q.symPerturb2) < 1e-8 && p.loc_diff < q.loc_diff){
+		} else if (fabs(p->persistence - q->persistence) < 1e-8 && fabs(p->symPerturb1 - q->symPerturb1) < 1e-8 && fabs(p->symPerturb2 - q->symPerturb2) < 1e-8 && p->loc_diff < q->loc_diff){
 			// cout << "caught something" <<endl;
 			return true;
 		} else{
 			return false;
 		}
 	}
-	static bool persistencePairCompare(const persistencePair12& p, const persistencePair01& q){
-		return p.persistence < q.persistence;
-	}
+	
 
 	PersistencePairs(Simplicial2Complex *K){
 		this->K = K;
@@ -114,7 +111,7 @@ public:
 			//cout << "\n";
 		}
 		for (int i = 0; i < this->smPersistencePairs.size(); i++){
-			outst << "Edge Triangle " << this->smPersistencePairs[i].persistence << " " << this->smPersistencePairs[i].symPerturb1 << " " << this->smPersistencePairs[i].symPerturb2 << "\n";
+			outst << "Edge Triangle " << this->smPersistencePairs[i]->persistence << " " << this->smPersistencePairs[i]->symPerturb1 << " " << this->smPersistencePairs[i]->symPerturb2 << "\n";
 			//this->smPersistencePairs[i].saddle->output();
             //this->smPersistencePairs[i].max->output();
 			//cout <<"\n";
@@ -227,8 +224,13 @@ void PersistencePairs::PhatPersistence(){
 			double symPerturb2 = get<1>(t->getSymPerturb());
 			double loc_diff = t->filtrationPosition - e->filtrationPosition;
 
-			persistencePair12 pp = { e, t, persistence, symPerturb1,\
-									symPerturb2, loc_diff };
+			persistencePair12* pp = new persistencePair12;
+			pp->saddle = e;
+			pp->max = t;
+			pp->persistence = persistence;
+			pp->symPerturb1 = symPerturb1;
+			pp->symPerturb2 = symPerturb2;
+			pp->loc_diff = loc_diff;
 			this->smPersistencePairs.push_back(pp);
 		}
 	}
@@ -381,7 +383,13 @@ void PersistencePairs::computePersistencePairsWithClear(){
 						double symPerturb2 = get<1>(t->getSymPerturb());
 						double loc_diff = t->filtrationPosition - e->filtrationPosition;
 
-						persistencePair12 pp = { e, t, persistence, symPerturb1, symPerturb2, loc_diff };
+						persistencePair12* pp = new persistencePair12;
+						pp->saddle = e;
+						pp->max = t;
+						pp->persistence = persistence;
+						pp->symPerturb1 = symPerturb1;
+						pp->symPerturb2 = symPerturb2;
+						pp->loc_diff = loc_diff;
 						this->smPersistencePairs.push_back(pp);
 					}
 				}
@@ -841,7 +849,7 @@ void PersistencePairs::cancelPersistencePairs(double delta){
 	int Pcounter = 0;
 	while (i < msPersistencePairs.size() && j < smPersistencePairs.size()){
 		persistencePair01 pair1 = msPersistencePairs[i];
-		persistencePair12 pair2 = smPersistencePairs[j];
+		persistencePair12 pair2 = *(smPersistencePairs[j]);
 
 		if (pair1.persistence < pair2.persistence || (fabs(pair1.persistence - pair2.persistence) < 1e-8) && pair1.symPerturb < pair2.symPerturb1 + 1e-8){
 			if (pair1.persistence < delta + 1e-8){
@@ -924,7 +932,7 @@ void PersistencePairs::cancelPersistencePairs(double delta){
 	}
 	else if (j < smPersistencePairs.size()){
 		while (j < smPersistencePairs.size()){
-			persistencePair12 pair = smPersistencePairs[j];
+			persistencePair12 pair = *(smPersistencePairs[j]);
 			if (pair.persistence <= delta){
 				//start = chrono::system_clock::now();
 				vector<Simplex*> *VPath = this->isCancellable(pair, cancelData);

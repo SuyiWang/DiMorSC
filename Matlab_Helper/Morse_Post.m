@@ -12,19 +12,24 @@ addpath('matlab_bgl');
 
 
 %%  Read in graph file
+disp('reading graph file');
 figure;
-[vert, G] = Draw1stable('inputs/outvert_1000.txt','inputs/outedge_1000.txt');
+% [vert, G] = Draw1stable('inputs/outvert_1000.txt','inputs/outedge_1000.txt');
+[vert, G] = Draw1stable('inputs/treevert.txt','inputs/treeedge.txt');
 DrawGraph(G, vert, 'r', 2);
 
 
 %%  adjust position and scale if necessary
+disp('transforming graph to original space');
 trans = [0 0];
 scale = [1 1];
 vert = transformvert(vert, trans, scale);
 
 
 %%  clean with branch - collapse degree 2 edges
+disp('converting to abstract graph');
 [absG, edgeG, edgeList, abs_idx] = ToAbstract_branch(G, 0, vert);
+disp('computing maximum spanning tree');
 absT = maxspanningtree(absG);
 % hold on;
 % plot3(vert(abs_idx,1),vert(abs_idx,2),vert(abs_idx,3),'b*');
@@ -33,11 +38,14 @@ absT = maxspanningtree(absG);
 
 
 %%  expand degree 2 edges and select the biggest connected component
+disp('converting back to actual graph');
 G = ToActual(absT, edgeG, edgeList, vert, 0, abs_idx);
+disp('Selecting the biggest connected component');
 G = SimpComponent(G, vert);
 
 
 %%  Make up edges
+disp('making up edges');
 restG = logical(absG>1e-6)  - logical(absT>1e-6);
 Gadd = makeup(restG, edgeG, edgeList, vert, 0, abs_idx);
 % idx = find(b{9}==2 | b{9} ==3);
@@ -48,11 +56,13 @@ Gadd = makeup(restG, edgeG, edgeList, vert, 0, abs_idx);
 
 
 %% Plot results
+disp('Plotting result');
 DrawGraph(G+Gadd, vert, 'b', 2);
 DrawGraph(Gadd, vert, 'k', 2);
 
 
 %% Generate files for vaa3D
+disp('writing swc file');
 tt = Tree2SWCtt(G+Gadd, vert);
 % save_v3d_swc_file(tt, 'Allen.swc')
-save_v3d_swc_file(tt, 'Partha.swc')
+save_v3d_swc_file(tt, 'inputs/Partha.swc')

@@ -2,7 +2,7 @@ function tt = Tree2SWCtt(Tree, vert, Handroot)
 
 [I J K] = find(Tree);
 if nargin == 2
-    Handroot = 1;
+    [maxx, Handroot] = max(vert(:,4));
 end
 n = length(vert);
 
@@ -17,7 +17,8 @@ if isempty(newroot)
 end
 
 newTree = Tree(realpoint,realpoint);
-newvert = vert(realpoint,1:3);
+newvert = vert(realpoint,1:4);
+newvert(:, 4) = newvert(:, 4)/maxx;
 
 newTree = newTree + newTree';
 [~, dt ,~, pred] = dfs(newTree, newroot);
@@ -52,3 +53,27 @@ end
 % pred(nonroot) = idx(pred(nonroot));
 
 tt(:,7) = newpred;
+
+%% generate distance function
+func = zeros(size(newvert,1), 1);
+func(newroot) = 0;
+for i = 2:length(idx)
+    curr = idx(i);
+    ancestor = pred(idx(i));
+    if (ancestor==-1) 
+        continue;
+    end
+    func(curr) = func(ancestor) + newvert(curr, 4) * sqrt(sum((newvert(curr,:) - newvert(ancestor,:)).*(newvert(curr,:) - newvert(ancestor,:))));
+end
+% figure;
+% scatter3(newvert(:,1), newvert(:,2), newvert(:,3), 3, func, 'filled');
+newTree = triu(newTree);
+[I J] = find(newTree);
+%% Write tree to bin file
+    fp = fopen('inputs/tree.bin','w');
+    fwrite(fp, length(newvert), 'int32');
+    fwrite(fp, [newvert(:, 1:3) func]', 'double');
+    fwrite(fp, length(I), 'int32');
+    fwrite(fp, [I-1 J-1]', 'int32');
+    fwrite(fp, 0, 'int32');
+    fclose(fp);

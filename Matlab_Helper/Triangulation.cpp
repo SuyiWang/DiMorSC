@@ -503,7 +503,7 @@ int triangulation_with_vertex(){
 	TriangleHash th;
 	EdgeHash eh;
 
-    double THD = 1e-6;
+    double THD = -1e-6;
 	int original_total = vertex.size();
 //    int counter = 0;
     for(int v = 0; v < original_total; ++v){
