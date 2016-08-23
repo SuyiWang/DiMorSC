@@ -15,7 +15,7 @@ addpath('matlab_bgl');
 disp('reading graph file');
 figure;
 % [vert, G] = Draw1stable('inputs/outvert_1000.txt','inputs/outedge_1000.txt');
-[vert, G] = Draw1stable('inputs/treevert.txt','inputs/treeedge.txt');
+[vert, G] = Draw1stable('inputs/outvert_100.txt','inputs/outedge_100.txt');
 DrawGraph(G, vert, 'r', 2);
 
 
@@ -65,4 +65,5 @@ DrawGraph(Gadd, vert, 'k', 2);
 disp('writing swc file');
 tt = Tree2SWCtt(G+Gadd, vert);
 % save_v3d_swc_file(tt, 'Allen.swc')
-save_v3d_swc_file(tt, 'inputs/Partha.swc')
+% save_v3d_swc_file(tt, 'inputs/Partha.swc')
+Draw_Tree_progress();

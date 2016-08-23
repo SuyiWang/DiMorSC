@@ -79,7 +79,7 @@ int main(int argc, char* argv[]){
 	
 	if (DEBUG){
 		cout << "Outputing persistence pairs...\n";
-		P.outputPersistencePairs("persistencePairs.txt");
+		P.outputPersistencePairs("persistencePairs.txt", DEBUG);
 		cout << "Done\n";
 	}
 

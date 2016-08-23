@@ -102,7 +102,7 @@ public:
 
 	void cancelPersistencePairs(double delta);
 
-	void outputPersistencePairs(string pathname){
+	void outputPersistencePairs(string pathname, int output_type){
 		ofstream outst(pathname, ios_base::trunc | ios_base::out);
 		for (int i = 0; i < this->msPersistencePairs.size(); i++){
 			outst << "Vertex Edge " << this->msPersistencePairs[i].persistence << " " << this->msPersistencePairs[i].symPerturb << "\n";
@@ -110,11 +110,13 @@ public:
 			//this->msPersistencePairs[i].saddle->output();
 			//cout << "\n";
 		}
-		for (int i = 0; i < this->smPersistencePairs.size(); i++){
-			outst << "Edge Triangle " << this->smPersistencePairs[i]->persistence << " " << this->smPersistencePairs[i]->symPerturb1 << " " << this->smPersistencePairs[i]->symPerturb2 << "\n";
-			//this->smPersistencePairs[i].saddle->output();
-            //this->smPersistencePairs[i].max->output();
-			//cout <<"\n";
+		if (output_type==1){
+			for (int i = 0; i < this->smPersistencePairs.size(); i++){
+				outst << "Edge Triangle " << this->smPersistencePairs[i]->persistence << " " << this->smPersistencePairs[i]->symPerturb1 << " " << this->smPersistencePairs[i]->symPerturb2 << "\n";
+				//this->smPersistencePairs[i].saddle->output();
+				//this->smPersistencePairs[i].max->output();
+				//cout <<"\n";
+			}
 		}
 	}
 };
@@ -760,40 +762,18 @@ void PersistencePairs::cancelPersistencePairs(double delta){
 	cout << "\tDone\n";
 	cout.flush();
 
-	if (DEBUG) this->outputPersistencePairs("persistencePairs.txt");
-
-	/*cout << "\tOutputting persistence pairs...\n";
+	cout << "\tOutputting min-saddle persistence pairs...\n";
 	ofstream persistencePairs("persistencePairs.txt", ios_base::trunc | ios_base::out);
-	int idx1 = 0, idx2 = 0;
-	while (idx1 < this->msPersistencePairs.size() && idx2 < this->smPersistencePairs.size()){
-		persistencePair01 pair1 = this->msPersistencePairs[idx1];
-		persistencePair12 pair2 = this->smPersistencePairs[idx2];
-
-		if (pair1.persistence <= pair2.persistence){
-			persistencePairs << "Vertex Edge " << pair1.persistence<< "\n";
-			idx1++;
-		}
-		else{
-			persistencePairs << "Edge Triangle " << pair2.persistence << "\n";
-			idx2++;
-		}
-	}
+	int idx1 = 0;
 
 	if (idx1 < this->msPersistencePairs.size()){
 		while (idx1 < this->msPersistencePairs.size()){
 			persistencePair01 pair = this->msPersistencePairs[idx1];
-			persistencePairs << "Vertex Edge " << pair.persistence << "\n";
+			persistencePairs << pair.persistence << "\n";
 			idx1++;
 		}
 	}
-	else if (idx2 < this->smPersistencePairs.size()){
-		while (idx2 < this->smPersistencePairs.size()){
-			persistencePair12 pair = this->smPersistencePairs[idx2];
-			persistencePairs << "Edge Triagle " << pair.persistence << "\n";
-			idx2++;
-		}
-	}
-	cout << "\tDone\n";*/
+	cout << "\tDone\n";
 
 	/*cout << "\tCancelling min-saddle pairs...\n";
 	int i = 0;
