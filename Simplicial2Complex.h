@@ -3,19 +3,68 @@
 #include <unordered_set>
 #include <set>
 #include <stack>
-
+// #include <ANN/ANN.h>
 #include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <iomanip>
 #include <unordered_map>
 #include <map>
-
+// #include "C:\Program Files\MATLAB\R2015b\extern\include\mat.h"
 #define DIM 3
-
-
+// #define min(a,b) (a <= b)? a : b
 using namespace std;
 
+/*namespace std{
+	namespace
+	{
+
+		// Code from boost
+		// Reciprocal of the golden ratio helps spread entropy
+		//     and handles duplicates.
+		// See Mike Seymour in magic-numbers-in-boosthash-combine:
+		//     http://stackoverflow.com/questions/4948780
+
+		template <class T>
+		inline void hash_combine(std::size_t& seed, T const& v)
+		{
+			seed ^= std::hash<T>()(v)+0x9e3779b9 + (seed << 6) + (seed >> 2);
+		}
+
+		// Recursive template code derived from Matthieu M.
+		template <class Tuple, size_t Index = std::tuple_size<Tuple>::value - 1>
+		struct HashValueImpl
+		{
+			static void apply(size_t& seed, Tuple const& tuple)
+			{
+				HashValueImpl<Tuple, Index - 1>::apply(seed, tuple);
+				hash_combine(seed, std::get<Index>(tuple));
+			}
+		};
+
+		template <class Tuple>
+		struct HashValueImpl<Tuple, 0>
+		{
+			static void apply(size_t& seed, Tuple const& tuple)
+			{
+				hash_combine(seed, std::get<0>(tuple));
+			}
+		};
+	}
+
+	template <typename ... TT>
+	struct hash<std::tuple<TT...>>
+	{
+		size_t
+			operator()(std::tuple<TT...> const& tt) const
+		{
+			size_t seed = 0;
+			HashValueImpl<std::tuple<TT...> >::apply(seed, tt);
+			return seed;
+		}
+
+	};
+}*/
 
 class Simplex;
 class Simplicial2Complex;
@@ -29,9 +78,8 @@ public:
 	/*Simplex may be cast to Vertex, Edge, or Triangle based on whether
 	dim = 0, 1, or 2, respectively*/
 	int dim;
-	float funcValue;
+	double funcValue;
 	static bool simplexPointerCompare(const Simplex* s, const Simplex* t);
-	static bool simplexPointerCompare2(const Simplex *s, const Simplex *t);
 	unsigned int filtrationPosition;
 	Simplex* prev = NULL;
 };
@@ -71,12 +119,12 @@ public:
 	bool isCritical(Simplex *s);
 	void setDiscreteVField(DiscreteVField *V);
 	int order();
-	void buildRipsComplex(float radius, float eps);
+	void buildRipsComplex(double radius, double eps);
 	void outputArcs(string, string);
 	void buildComplexFromFile(string pathname);
 	void buildComplexFromFile2(string pathname);
 	void buildComplexFromFile2_BIN(string pathname);
-	void buildComplexDiscrete(string, string, float);
+	void buildComplexDiscrete(string, string, double);
 	void outputComplex(string pathname);
 	void buildPsuedoMorseFunction();
 	void cancel0PersistencePairs();
@@ -116,12 +164,12 @@ public:
 };
 
 class Vertex:public Simplex{
-	float coords[DIM];
+	double coords[DIM];
 	vector<Edge*> incidenceList;
 	int vPosition;
 public:
-	Vertex(float *coords, float funcValue);
-	Vertex(float funcValue) {
+	Vertex(double *coords, double funcValue);
+	Vertex(double funcValue) {
 		this->funcValue = funcValue;
 		this->dim = 0;
 	}
@@ -131,9 +179,9 @@ public:
 	bool isAdjacent(Vertex *v);
 	bool isDeleted();
 	void deleteVertex();
-	float* getCoords();
-	float getFuncValue();
-	void setFuncValue(float funcValue){
+	double* getCoords();
+	double getFuncValue();
+	void setFuncValue(double funcValue){
 		this->funcValue = funcValue;
 	}
 	int degree();
@@ -177,11 +225,11 @@ class Edge:public Simplex{
 	/*This symbolic perturbation represents a multiple of some infinitesimal eps>0
 	This is used to distinguish between edges with the same function value. It is equal to the
 	sum of the function values of the two vertices*/
-	float symbolicPerturbation1;
+	double symbolicPerturbation1;
 
 public:
 	Edge(Vertex* v1, Vertex* v2);
-	Edge(Vertex* v1, Vertex* v2, float funcValue);
+	Edge(Vertex* v1, Vertex* v2, double funcValue);
 	tuple<Vertex*, Vertex*> getVertices();
 	void addTriangle(Triangle *t);
 	void removeTriangle(Triangle *t);
@@ -198,14 +246,14 @@ public:
 	int degree();
 	bool isDeleted();
 	void deleteEdge();
-	float getFuncValue();
-	void setFuncValue(float funcValue);
+	double getFuncValue();
+	void setFuncValue(double funcValue);
 	int getEPosition();
 	void setEposition(int p);
 	/*requires that this and e share a Vertex*/
 	Vertex* findVertex(Edge* e);
-	float getSymPerturb(){ return this->symbolicPerturbation1; }
-	void setSymPerturb(float f){ this->symbolicPerturbation1 = f; }
+	double getSymPerturb(){ return this->symbolicPerturbation1; }
+	void setSymPerturb(double f){ this->symbolicPerturbation1 = f; }
 	vector<Triangle*>::iterator begin(){
 		return this->incidenceList.begin();
 	}
@@ -246,25 +294,25 @@ class Triangle:public Simplex{
 	with the same function value.
 	symbolicPerturbation1 = the symbolic perturbation of the edge with the highest function value
 	symbolicPerturbation2 = the sum of the vertices*/
-	float symbolicPerturbation1;
-	float symbolicPerturbation2;
+	double symbolicPerturbation1;
+	double symbolicPerturbation2;
 
 public:
 	Triangle(Edge *e1, Edge *e2, Edge *e3);
 	Triangle(Vertex *v1, Vertex *v2, Vertex *v3);
-	Triangle(Edge *e1, Edge *e2, Edge *e3, float funcValue);
-	Triangle(Vertex *v1, Vertex *v2, Vertex *v3, float funcValue);
+	Triangle(Edge *e1, Edge *e2, Edge *e3, double funcValue);
+	Triangle(Vertex *v1, Vertex *v2, Vertex *v3, double funcValue);
 	tuple<Edge*, Edge*, Edge*> getEdges();
 	tuple<Vertex*, Vertex*, Vertex*> getVertices();
 	bool isDeleted();
 	void deleteTriangle();
-	float getFuncValue();
-	void setFuncValue(float funcValue);
+	double getFuncValue();
+	void setFuncValue(double funcValue);
 	int getTPosition();
 	void setTposition(int p);
 	Vertex* oppositeVertex(Edge* e);
-	tuple<float, float> getSymPerturb(){ return make_tuple(this->symbolicPerturbation1, this->symbolicPerturbation2); }
-	void setSymPerturb(float f1, float f2){ this->symbolicPerturbation1 = f1; this->symbolicPerturbation2 = f2; }
+	tuple<double, double> getSymPerturb(){ return make_tuple(this->symbolicPerturbation1, this->symbolicPerturbation2); }
+	void setSymPerturb(double f1, double f2){ this->symbolicPerturbation1 = f1; this->symbolicPerturbation2 = f2; }
 	static bool triPointerCompare(Triangle *t1, Triangle *t2){
 		if (t1->funcValue < t2->funcValue){
 			return true;
@@ -402,8 +450,8 @@ void Simplicial2Complex::outputComplex(string pathname) {
 	file << this->vertexList.size() << "\n";
 	for (vector<Vertex*>::iterator it = this->vertexList.begin(); it != this->vertexList.end(); it++) {
 		Vertex *v = *it;
-		float *coords = v->getCoords();
-		float funcValue = v->getFuncValue();
+		double *coords = v->getCoords();
+		double funcValue = v->getFuncValue();
 		for (int j = 0; j < DIM; j++) {
 			file << coords[j] << " ";
 		}
@@ -493,8 +541,8 @@ void Simplicial2Complex::buildComplexFromFile(string pathname) {
 	file >> numOfVertices;
 	cout << "\tReading " << numOfVertices << "vertices" << endl;
 	for (int i = 0; i < numOfVertices; i++) {
-		float coords[DIM];
-		float funcValue;
+		double coords[DIM];
+		double funcValue;
 		for (int j = 0; j < DIM; j++) {
 			file >> coords[j];
 		}
@@ -549,8 +597,8 @@ void Simplicial2Complex::buildComplexFromFile2(string pathname) {
 	cout << "\tReading " << numOfVertices << "vertices" << endl;
 
 	for (int i = 0; i < numOfVertices; i++) {
-		float coords[DIM];
-		float funcValue;
+		double coords[DIM];
+		double funcValue;
 		for (int j = 0; j < DIM; j++) {
 			file >> coords[j];
 		}
@@ -605,8 +653,8 @@ void Simplicial2Complex::buildComplexFromFile2_BIN(string pathname) {
 	ifstream file(pathname, ios::binary);
 	char* int_buffer = new char[sizeof(int)];
 	int* int_reader = (int*) int_buffer;
-	char* float_buffer = new char[sizeof(float)];
-	float* float_reader = (float*) float_buffer;
+	char* double_buffer = new char[sizeof(double)];
+	double* double_reader = (double*) double_buffer;
 	
 	
 	int numOfVertices;	
@@ -615,14 +663,14 @@ void Simplicial2Complex::buildComplexFromFile2_BIN(string pathname) {
 	cout << "\tReading " << numOfVertices << "vertices" << endl;
 
 	for (int i = 0; i < numOfVertices; i++) {
-		float coords[DIM];
-		float funcValue;
+		double coords[DIM];
+		double funcValue;
 		for (int j = 0; j < DIM; j++) {
-			file.read(float_buffer, sizeof(float));
-			coords[j] = *float_reader;
+			file.read(double_buffer, sizeof(double));
+			coords[j] = *double_reader;
 		}
-		file.read(float_buffer, sizeof(float));
-		funcValue = *float_reader;
+		file.read(double_buffer, sizeof(double));
+		funcValue = *double_reader;
 		Vertex *v = new Vertex(coords, funcValue);
 		int vPosition = this->addVertex(v);
 		v->setVposition(vPosition);
@@ -680,7 +728,7 @@ void Simplicial2Complex::buildComplexFromFile2_BIN(string pathname) {
 
 
 /*
-void Simplicial2Complex::buildRipsComplex(float radius, float eps){
+void Simplicial2Complex::buildRipsComplex(double radius, double eps){
 	this->edgeList.clear();
 	this->triList.clear();
 
@@ -690,7 +738,7 @@ void Simplicial2Complex::buildRipsComplex(float radius, float eps){
 	for (int i = 0; i < numOfVertices; i++){
 		ANNpoint currentPoint = data[i];
 		Vertex *v = this->vertexList.at(i);
-		float *coords = v->getCoords();
+		double *coords = v->getCoords();
 		for (int j = 0; j < DIM; j++) {
 			currentPoint[j] = coords[j];
 		}
@@ -698,7 +746,7 @@ void Simplicial2Complex::buildRipsComplex(float radius, float eps){
 
 	ANNkd_tree *kdTree = new ANNkd_tree(data, numOfVertices, DIM);
 
-	ANNdist sqRad = (float)radius * radius;
+	ANNdist sqRad = (double)radius * radius;
 	for (int i = 0; i < numOfVertices; i++){
 		if(i % 1000 == 0) cout << "Handling vertex " << i << "\n";
 		ANNpoint queryPt = data[i];
@@ -747,17 +795,17 @@ void Simplicial2Complex::buildRipsComplex(float radius, float eps){
 }
 */
 
-//void Simplicial2Complex::buildComplexDiscrete(string distPathname, string funcPathname, float radius) {
+//void Simplicial2Complex::buildComplexDiscrete(string distPathname, string funcPathname, double radius) {
 //	const char *distPname = distPathname.c_str();
 //	const char *funcPname = funcPathname.c_str();
 //
 //	MATFile *kdeFile = matOpen(funcPname, "r");
 //	mxArray *kdeValues = matGetVariable(kdeFile, "data");
 //	int numOfVertices = (int)mxGetN(kdeValues);
-//	float *arrayPtr = mxGetPr(kdeValues);
+//	double *arrayPtr = mxGetPr(kdeValues);
 //
 //	for (int i = 0; i < numOfVertices; i++) {
-//		float funcValue = arrayPtr[i];
+//		double funcValue = arrayPtr[i];
 //		Vertex *v = new Vertex(funcValue);
 //		int vPosition = this->addVertex(v);
 //		v->setVposition(vPosition);
@@ -772,7 +820,7 @@ void Simplicial2Complex::buildRipsComplex(float radius, float eps){
 //
 //	for (int i = 0; i < numOfVertices; i++) {
 //		for (int j = i + 1; j < numOfVertices; j++) {
-//			float distance = 1 - arrayPtr[i + j * numOfRows];
+//			double distance = 1 - arrayPtr[i + j * numOfRows];
 //			if (distance < radius) {
 //				Vertex *v1 = this->vertexList[i];
 //				Vertex *v2 = this->vertexList[j];
@@ -805,7 +853,7 @@ void Simplicial2Complex::buildPsuedoMorseFunction(){
 		tuple<Vertex*, Vertex*> vertices = e->getVertices();
 		Vertex *max = get<0>(vertices);
 		Vertex *v2 = get<1>(vertices);
-		float total = max->getFuncValue() + v2->getFuncValue();
+		double total = max->getFuncValue() + v2->getFuncValue();
 		if (v2->getFuncValue() > max->getFuncValue()){
 			max = v2;
 		}
@@ -823,7 +871,7 @@ void Simplicial2Complex::buildPsuedoMorseFunction(){
 		Edge *e2 = get<1>(edges);
 		Edge *e3 = get<2>(edges);
 		tuple<Vertex*, Vertex*, Vertex*> vertices = t->getVertices();
-		float total = get<0>(vertices)->getFuncValue() + get<1>(vertices)->getFuncValue() + get<2>(vertices)->getFuncValue();
+		double total = get<0>(vertices)->getFuncValue() + get<1>(vertices)->getFuncValue() + get<2>(vertices)->getFuncValue();
 		if (e2->getFuncValue() > max->getFuncValue() || e2->getFuncValue() == max->getFuncValue() && e2->getSymPerturb() > max->getSymPerturb()){
 			max = e2;
 		}
@@ -881,7 +929,7 @@ void Simplicial2Complex::cancel0PersistencePairs(){
 		if (this->criticalSet.count((Simplex*)e3) == 1){ criticalEdges.push_back(e3); }
 		/*Now figure out which critical edge has the greatest difference between it and the opposite vertex*/
 		if (criticalEdges.size() > 0){
-			float maxDif = 0;
+			double maxDif = 0;
 			Edge* maxDifEdge = criticalEdges.at(0);
 			for (int i = 0; (unsigned)i < criticalEdges.size(); i++){
 				Edge *critEdge = criticalEdges.at(i);
@@ -1113,7 +1161,7 @@ set<Simplex*>* Simplicial2Complex::descendingManifold(Simplex* s){
 
 void Simplicial2Complex::flipAndTranslateVertexFunction(){
 	/*Flip the function and find the maximum function value*/
-	float max = 0;
+	double max = 0;
 	for (int i = 0; i < this->vertexList.size(); i++){
 		if (this->vertexList[i]->getFuncValue() > max){
 			max = this->vertexList[i]->getFuncValue();
@@ -1131,9 +1179,9 @@ void Simplicial2Complex::flipAndTranslateVertexFunction(){
 //	output << std::setprecision(10);
 //	for (vector<Vertex*>::iterator it = this->vertexList.begin(); it != this->vertexList.end(); it++){
 //		Vertex *v = *it;
-//		float xCoord = get<0>(v->getCoords());
-//		float yCoord = get<1>(v->getCoords());
-//		float funcValue = v->getFuncValue();
+//		double xCoord = get<0>(v->getCoords());
+//		double yCoord = get<1>(v->getCoords());
+//		double funcValue = v->getFuncValue();
 //		output << xCoord << " " << yCoord << " " << funcValue << endl;
 //	}
 //	output.close();
@@ -1145,11 +1193,11 @@ void Simplicial2Complex::flipAndTranslateVertexFunction(){
 //		Edge *e = *it;
 //		Vertex *v1 = get<0>(e->getVertices());
 //		Vertex *v2 = get<1>(e->getVertices());
-//		float xCoord1 = get<0>(v1->getCoords());
-//		float yCoord1 = get<1>(v1->getCoords());
-//		float xCoord2 = get<0>(v2->getCoords());
-//		float yCoord2 = get<1>(v2->getCoords());
-//		float funcValue = e->getFuncValue();
+//		double xCoord1 = get<0>(v1->getCoords());
+//		double yCoord1 = get<1>(v1->getCoords());
+//		double xCoord2 = get<0>(v2->getCoords());
+//		double yCoord2 = get<1>(v2->getCoords());
+//		double funcValue = e->getFuncValue();
 //
 //		output << xCoord1 << " " << yCoord1 << " " << xCoord2 << " " << yCoord2 << " " << funcValue << endl;
 //	}
@@ -1163,13 +1211,13 @@ void Simplicial2Complex::flipAndTranslateVertexFunction(){
 //		Vertex *v1 = get<0>(t->getVertices());
 //		Vertex *v2 = get<1>(t->getVertices());
 //		Vertex *v3 = get<2>(t->getVertices());
-//		float xCoord1 = get<0>(v1->getCoords());
-//		float yCoord1 = get<1>(v1->getCoords());
-//		float xCoord2 = get<0>(v2->getCoords());
-//		float yCoord2 = get<1>(v2->getCoords());
-//		float xCoord3 = get<0>(v3->getCoords());
-//		float yCoord3 = get<1>(v3->getCoords());
-//		float funcValue = t->getFuncValue();
+//		double xCoord1 = get<0>(v1->getCoords());
+//		double yCoord1 = get<1>(v1->getCoords());
+//		double xCoord2 = get<0>(v2->getCoords());
+//		double yCoord2 = get<1>(v2->getCoords());
+//		double xCoord3 = get<0>(v3->getCoords());
+//		double yCoord3 = get<1>(v3->getCoords());
+//		double funcValue = t->getFuncValue();
 //
 //		output << xCoord1 << " " << yCoord1 << " " << xCoord2 << " " << yCoord2 << " " << xCoord3 << " " << yCoord3 << " " << funcValue << endl;
 //	}
@@ -1177,7 +1225,7 @@ void Simplicial2Complex::flipAndTranslateVertexFunction(){
 //}
 //
 
-Vertex::Vertex(float *coords, float funcValue){
+Vertex::Vertex(double *coords, double funcValue){
 	for (int i = 0; i < DIM; i++) {
 		this->coords[i] = coords[i];
 	}
@@ -1225,11 +1273,11 @@ bool Vertex::isAdjacent(Vertex *v){
 //	this->deleted = true;
 //}
 
-float* Vertex::getCoords(){
+double* Vertex::getCoords(){
 	return this->coords;
 }
 
-float Vertex::getFuncValue(){
+double Vertex::getFuncValue(){
 	return this->funcValue;
 }
 
@@ -1260,7 +1308,7 @@ Edge::Edge(Vertex *v1, Vertex *v2){
 	this->dim = 1;
 }
 
-Edge::Edge(Vertex *v1, Vertex *v2, float funcValue){
+Edge::Edge(Vertex *v1, Vertex *v2, double funcValue){
 	this->vertices = make_tuple(v1, v2);
 	this->funcValue = funcValue;
 	this->dim = 1;
@@ -1308,11 +1356,11 @@ int Edge::degree(){
 //	this->deleted = true;
 //}
 
-float Edge::getFuncValue(){
+double Edge::getFuncValue(){
 	return this->funcValue;
 }
 
-void Edge::setFuncValue(float funcValue){
+void Edge::setFuncValue(double funcValue){
 	this->funcValue = funcValue;
 }
 
@@ -1351,7 +1399,7 @@ Triangle::Triangle(Vertex *v1, Vertex *v2, Vertex *v3){
 	this->dim = 2;
 }
 
-Triangle::Triangle(Edge *e1, Edge* e2, Edge *e3, float funcValue){
+Triangle::Triangle(Edge *e1, Edge* e2, Edge *e3, double funcValue){
 	this->edges = make_tuple(e1, e2, e3);
 	Vertex *v1 = e1->findVertex(e2);
 	Vertex *v2 = e2->findVertex(e3);
@@ -1361,7 +1409,7 @@ Triangle::Triangle(Edge *e1, Edge* e2, Edge *e3, float funcValue){
 	this->dim = 2;
 }
 
-Triangle::Triangle(Vertex *v1, Vertex *v2, Vertex *v3, float funcValue){
+Triangle::Triangle(Vertex *v1, Vertex *v2, Vertex *v3, double funcValue){
 	this->vertices = make_tuple(v1, v2, v3);
 	Edge *e1 = v1->findEdge(v2);
 	Edge *e2 = v2->findEdge(v3);
@@ -1387,10 +1435,10 @@ tuple<Vertex*, Vertex*, Vertex*> Triangle::getVertices(){
 //	this->deleted = true;
 //}
 
-float Triangle::getFuncValue(){
+double Triangle::getFuncValue(){
 	return this->funcValue;
 }
-void Triangle::setFuncValue(float funcValue){
+void Triangle::setFuncValue(double funcValue){
 	this->funcValue = funcValue;
 }
 int Triangle::getTPosition(){
@@ -1596,93 +1644,3 @@ bool Simplex::simplexPointerCompare(const Simplex *s, const Simplex *t){
 		return false;
 	}
 }
-
-// sorting 2887509 simplices - 1 uses 9.8 sec, 2 uses 5.83 sec.
-bool Simplex::simplexPointerCompare2(const Simplex *s, const Simplex *t){
-	/*We sort simplices lexicographically according to the following scheme
-	1st		by function value
-	2nd		by dimension
-	3rd		3 cases
-			Vertex
-				1st by vPosition
-			Edge
-				1st by symbolic perturbation
-				2nd by ePosition
-			Triangle
-				1st by first-order symbolic perturbation
-				2nd by second-order symbolic perturbation
-				3rd by tPosition
-
-	These are each broken down into if-elseif-else statements
-	if (<less than>){ return true;}
-	else if (<equal to>){ next on list }
-	else { return false;}
-	*/
-
-
-
-	//By function value
-	float f1 = s->funcValue, f2 = t->funcValue;
-	if (f1 < f2 - 1e-8){
-		return true;
-	}else if(f1 > f2 + 1e-8){
-		return false;
-	}
-	else{
-		//By dimension
-		short int d1 = s->dim, d2 = t->dim;
-		if (d1 < d2){
-			return true;
-		}else if(d1 > d2){
-			return false;
-		}
-		else{
-			//3 cases
-			if (d1 == 0){
-				//by vPosition
-				return ((Vertex*)s)->getVPosition() < ((Vertex*)t)->getVPosition();
-			}
-			else if (d1 == 1){
-				//by symbolic perturbation
-				Edge* e1 = (Edge*)s;
-				Edge* e2 = (Edge*)t;
-				float sp1 = e1->getSymPerturb();
-				float sp2 = e2->getSymPerturb();
-				if (sp1 < sp2 - 1e-8){
-					return true;
-				}else if (sp1 > sp2 + 1e-8){
-					return false;
-				}
-				else{
-					return e1->getEPosition() < e2->getEPosition();
-				}
-			}
-			else{
-				//by first-order symbolic perturbation
-				Triangle* t1 = (Triangle*) s;
-				Triangle* t2 = (Triangle*) t;
-				
-				tuple<float, float> Tri_sp1 = t1->getSymPerturb();
-				tuple<float, float> Tri_sp2 = t2->getSymPerturb();
-				if (get<0>(Tri_sp1) < get<0>(Tri_sp2) - 1e-8){
-					return true;
-				}else if(get<0>(Tri_sp1) > get<0>(Tri_sp2) + 1e-8){
-					return false;
-				}
-				else{
-					//by second-order symbolic perturbation
-					if (get<1>(Tri_sp1) < get<1>(Tri_sp2) - 1e-8){
-						return true;
-					}else if(get<1>(Tri_sp1) > get<1>(Tri_sp2) + 1e-8){
-						return false;
-					}
-					else{
-						//by tPosition
-						return t1->getTPosition() < t2->getTPosition();
-					}
-				}
-			}
-		}
-	}
-}
-

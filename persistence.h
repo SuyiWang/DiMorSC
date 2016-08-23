@@ -1,9 +1,11 @@
 #include "Simplicial2Complex.h"
+#include "sparseZ2matrix.h"
 #include <list>
 #include <stack>
+//#include <windows.h>
+//#include <chrono>
 #include <iostream>
 #include <algorithm>
-#include <ctime>
 
 #include <phat/compute_persistence_pairs.h>
 
@@ -29,17 +31,17 @@ using namespace std;
 typedef struct {
 	Vertex *min;
 	Edge *saddle;
-	float persistence;
-	float symPerturb;
-	float loc_diff;
+	double persistence;
+	double symPerturb;
+	double loc_diff;
 }persistencePair01;
 typedef struct {
 	Edge *saddle;
 	Triangle *max;
-	float persistence;
-	float symPerturb1;
-	float symPerturb2;
-	float loc_diff;
+	double persistence;
+	double symPerturb1;
+	double symPerturb2;
+	double loc_diff;
 }persistencePair12;
 
 class PersistencePairs{
@@ -67,24 +69,17 @@ public:
 	
 	
 	static bool persistencePairCompare12(const persistencePair12* p, const persistencePair12* q){
-		if(p->persistence < q->persistence - 1e-8){
+		if(p->persistence < q->persistence){
 			return true;
-		}else if(p->persistence > q->persistence + 1e-8){
+		} else if (fabs(p->persistence - q->persistence) < 1e-8 && p->symPerturb1 < q->symPerturb1){
+			return true;
+		} else if (fabs(p->persistence - q->persistence) < 1e-8 && fabs(p->symPerturb1 - q->symPerturb1) < 1e-8 && p->symPerturb2 < q->symPerturb2){
+			return true;
+		} else if (fabs(p->persistence - q->persistence) < 1e-8 && fabs(p->symPerturb1 - q->symPerturb1) < 1e-8 && fabs(p->symPerturb2 - q->symPerturb2) < 1e-8 && p->loc_diff < q->loc_diff){
+			// cout << "caught something" <<endl;
+			return true;
+		} else{
 			return false;
-		}else{
-			if(p->symPerturb1 < q->symPerturb1 - 1e-8){
-				return true;
-			}else if(p->symPerturb1 > q->symPerturb1 + 1e-8){
-				return false;
-			}else{
-				if (p->symPerturb2 < q->symPerturb2 - 1e-8){
-					return true;
-				}else if(p->symPerturb2 > q->symPerturb2 + 1e-8){
-					return false;
-				}else{
-					return p->loc_diff < q->loc_diff;
-				}
-			}
 		}
 	}
 	
@@ -105,7 +100,7 @@ public:
 	cancelAlongPath have been made between then and this call*/
 	void cancelAlongVPath(vector<Simplex*>* VPath);
 
-	void cancelPersistencePairs(float delta);
+	void cancelPersistencePairs(double delta);
 
 	void outputPersistencePairs(string pathname){
 		ofstream outst(pathname, ios_base::trunc | ios_base::out);
@@ -124,7 +119,6 @@ public:
 	}
 };
 
-
 void PersistencePairs::buildFiltration(){
 	K = this->K;
 	/*Reserve 3 times the vertices as there are in K. This is roughly how many simplices are usually in K, so filtration doesn't need to resize as often*/
@@ -136,18 +130,7 @@ void PersistencePairs::buildFiltration(){
 
 	/*Sort the simplices according to their function value (including symbolic perturbations)*/
 	cout << "\t sorting " << filtration.size() <<" simplicies...\n";
-
-	
-	std::clock_t start;
-    double duration;
-    start = std::clock();
-    
-	sort(filtration.begin(), filtration.end(), Simplex::simplexPointerCompare2);
-	
-	duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-    std::cout<<"\t sorting time: "<< duration <<'\n';
-	
-	
+	sort(filtration.begin(), filtration.end(), Simplex::simplexPointerCompare);
 	for (unsigned int i = 0; i < this->filtration.size(); i++){
 		Simplex *s = filtration[i];
 		s->filtrationPosition = i;
@@ -211,24 +194,10 @@ void PersistencePairs::PhatPersistence(){
 	
 	// call Phat
 	cout << "\tComputing persitence pairs...\n";
-	
-	std::clock_t start;
-    double duration;
-    start = std::clock();
-    
 	phat::persistence_pairs pairs;
 	phat::compute_persistence_pairs\
 		< phat::twist_reduction >( pairs, boundary_matrix );
-	
-	duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-    std::cout<<"\t Persistence pair computed in: "<< duration <<"sec\n";
-    start = std::clock();
-    
 	pairs.sort();
-	
-	duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-    std::cout<<"\t Persistence pair sorted in: "<< duration <<"sec\n";
-    
 	cout << "\tComputed and sorted!\n";
 	
 	// post processing: add sm-ms pairs, set critical points
@@ -239,9 +208,9 @@ void PersistencePairs::PhatPersistence(){
 		if (s1->dim == 0){
 			Vertex *v = (Vertex*)s1;
 			Edge *e = (Edge*)s2;
-			float persistence = e->funcValue - v->funcValue;
-			float symPerturb = e->getSymPerturb();
-			float loc_diff = e->filtrationPosition - v->filtrationPosition;
+			double persistence = e->funcValue - v->funcValue;
+			double symPerturb = e->getSymPerturb();
+			double loc_diff = e->filtrationPosition - v->filtrationPosition;
 
 			persistencePair01 pp = { v, e, persistence, symPerturb, loc_diff };
 			this->msPersistencePairs.push_back(pp);
@@ -249,11 +218,11 @@ void PersistencePairs::PhatPersistence(){
 		else{
 			Edge* e = (Edge*)s1;
 			Triangle* t = (Triangle*)s2;
-			float persistence = t->funcValue - e->funcValue;
-			float symPerturb1 = get<0>(t->getSymPerturb())\
+			double persistence = t->funcValue - e->funcValue;
+			double symPerturb1 = get<0>(t->getSymPerturb())\
 							     - e->getSymPerturb();
-			float symPerturb2 = get<1>(t->getSymPerturb());
-			float loc_diff = t->filtrationPosition - e->filtrationPosition;
+			double symPerturb2 = get<1>(t->getSymPerturb());
+			double loc_diff = t->filtrationPosition - e->filtrationPosition;
 
 			persistencePair12* pp = new persistencePair12;
 			pp->saddle = e;
@@ -281,6 +250,185 @@ void PersistencePairs::PhatPersistence(){
 	cout << "\tCritical points initialized\n";
 }
 
+//Compute persistence pairs
+void PersistencePairs::computePersistencePairsWithClear(){
+	SparseZ2Matrix *boundaryMatrix = new SparseZ2Matrix(this->filtration.size(), this->filtration.size());
+
+	cout << "\tInitializing boundary matrix...\n";
+	cout << "\t\t" << this->filtration.size() << " x " << this->filtration.size() << "\n";
+	for (unsigned int i = 0; i < this->filtration.size(); i++){
+		Simplex *s = filtration[i];
+		if (s->dim == 0){
+			//no boundary. no bits to set in matrix
+		}
+		else if (s->dim == 1){
+			Edge *e = (Edge*)s;
+			Vertex *v1 = get<0>(e->getVertices());
+			Vertex *v2 = get<1>(e->getVertices());
+			if (v1->filtrationPosition < v2->filtrationPosition) {
+				boundaryMatrix->set(v1->filtrationPosition, i);
+				boundaryMatrix->set(v2->filtrationPosition, i);
+			}else{
+				boundaryMatrix->set(v2->filtrationPosition, i);
+				boundaryMatrix->set(v1->filtrationPosition, i);
+			}
+		}
+		else if (s->dim == 2){
+			Triangle *t = (Triangle*)s;
+			Edge *e1 = get<0>(t->getEdges());
+			Edge *e2 = get<1>(t->getEdges());
+			Edge *e3 = get<2>(t->getEdges());
+			Edge *edges[3] = { e1,e2,e3 };
+			for(int j = 0; j < 3; j++){
+				for(int k = j; k < 3; k++){
+					if(edges[k]->filtrationPosition < edges[j]->filtrationPosition){
+						Edge *tmp = edges[k];
+						edges[k] = edges[j];
+						edges[j] = tmp;
+					}
+				}
+			}
+			boundaryMatrix->set(edges[0]->filtrationPosition, i);
+			boundaryMatrix->set(edges[1]->filtrationPosition, i);
+			boundaryMatrix->set(edges[2]->filtrationPosition, i);
+		}
+	}
+
+	boundaryMatrix->output("boundary.txt");
+
+	cout << "\tInitializing pivot array...\n";
+	/*The ith entry of pivots stores the number j such that the ith row is the pivot row of the jth column in the reduced matrix*/
+	int *pivots = new int[this->filtration.size()];
+	/*Initially, all entries are set to -1, meaning "unknown"*/
+	for (unsigned int i = 0; i < this->filtration.size(); i++){
+		pivots[i] = -1;
+	}
+
+	double average1 = 0, average2 = 0, average3 = 0;
+	int a1Count = 0, a2Count = 0, a3Count = 0;
+
+
+	for (int dim = 2; dim >= 0; dim--)
+	{
+		cout << "\tAt dimension " << dim << endl;
+		/*Go through the columns in filtration order*/
+		for (unsigned int j = 0; j < this->filtration.size(); j++){
+
+			if (j % 100000 == 0) {
+				cout << "\r";
+				cout << "\tHandling column " << j << "/" << this->filtration.size() << "...";
+				cout.flush();
+			}
+
+			/*If the column is 0, then there is nothing to do. Move on to the next column*/
+			//chrono::time_point<chrono::system_clock> start, end;
+			//start = chrono::system_clock::now();
+			if (boundaryMatrix->isZeroColumn(j) == true) continue;
+			//end = chrono::system_clock::now();
+			//chrono::duration<double> elapsedDuration = end - start;
+			//double elapsedSeconds = elapsedDuration.count();
+			//average1 = (elapsedSeconds + a1Count * average1) / (a1Count + 1);
+			//a1Count++;
+
+
+
+			if (this->filtration[j]->dim == dim){
+				/*If the column is not 0, find the pivot*/
+				unsigned int pivotJ = boundaryMatrix->getPivotRow(j);
+
+				/*As long as column j is not 0, and there is some previous column with the same pivot row,
+				add the previous column to column j in order to cancel the pivot. Then find the new pivot
+				and repeat until column j is 0 or there is no previous column to cancel its pivot*/
+				while (boundaryMatrix->isZeroColumn(j) == false && pivots[pivotJ] != -1){
+					//start = chrono::system_clock::now();
+					boundaryMatrix->add((unsigned int)pivots[pivotJ], j);
+					//end = chrono::system_clock::now();
+					//elapsedDuration = end - start;
+					//elapsedSeconds = elapsedDuration.count();
+					//average2 = (elapsedSeconds + a2Count * average2) / (a2Count + 1);
+					//a2Count++;
+					if (boundaryMatrix->isZeroColumn(j) == false){
+						pivotJ = boundaryMatrix->getPivotRow(j);
+					}
+				}
+
+				/*If the column j gets to this point and is still not 0, then it must have a pivot that can't be canceled.
+				In which case, the simplex corresponding to the pivot row and the the simplex corresponding to column j form
+				a persistence pair*/
+				//start = chrono::system_clock::now();
+				if (boundaryMatrix->isZeroColumn(j) == false){
+					/*Set column j as the column with row pivotJ as its pivot in the reduced matrix*/
+					unsigned int i = pivotJ;
+					pivots[i] = j;
+					boundaryMatrix->clearColumn(i);
+
+					/*Add persistence pair*/
+					Simplex *s1 = this->filtration[i];
+					Simplex *s2 = this->filtration[j];
+					if (s1->dim == 0){
+						Vertex *v = (Vertex*)s1;
+						Edge *e = (Edge*)s2;
+						double persistence = e->funcValue - v->funcValue;
+						double symPerturb = e->getSymPerturb();
+						double loc_diff = e->filtrationPosition - v->filtrationPosition;
+
+						persistencePair01 pp = { v, e, persistence, symPerturb, loc_diff };
+						this->msPersistencePairs.push_back(pp);
+					}
+					else{
+						Edge* e = (Edge*)s1;
+						Triangle* t = (Triangle*)s2;
+						double persistence = t->funcValue - e->funcValue;
+						double symPerturb1 = get<0>(t->getSymPerturb()) - e->getSymPerturb();
+						double symPerturb2 = get<1>(t->getSymPerturb());
+						double loc_diff = t->filtrationPosition - e->filtrationPosition;
+
+						persistencePair12* pp = new persistencePair12;
+						pp->saddle = e;
+						pp->max = t;
+						pp->persistence = persistence;
+						pp->symPerturb1 = symPerturb1;
+						pp->symPerturb2 = symPerturb2;
+						pp->loc_diff = loc_diff;
+						this->smPersistencePairs.push_back(pp);
+					}
+				}
+				//end = chrono::system_clock::now();
+				//elapsedDuration = end - start;
+				//elapsedSeconds = elapsedDuration.count();
+				//average3 = (elapsedSeconds + a3Count * average3) / (a3Count + 1);
+				//a3Count++;
+			}
+		}
+		cout<<"done\n";
+	}
+	for (vector<Vertex*>::iterator it = this->K->vBegin(); it != this->K->vEnd(); it++) {
+		K->addCriticalPoint((Simplex*)*it);
+	}
+	for (vector<Edge*>::iterator it = this->K->eBegin(); it != this->K->eEnd(); it++) {
+		K->addCriticalPoint((Simplex*)*it);
+	}
+	for (vector<Triangle*>::iterator it = this->K->tBegin(); it != this->K->tEnd(); it++) {
+		K->addCriticalPoint((Simplex*)*it);
+	}
+
+	delete boundaryMatrix;
+	/*for (vector<persistencePair01>::iterator it = this->msPersistencePairs.begin(); it != this->msPersistencePairs.end(); it++) {
+		persistencePair01 p = *it;
+		this->K->addCriticalPoint(p.min);
+		this->K->addCriticalPoint(p.saddle);
+	}*/
+	cout << "# of min-saddle pairs: " << this->msPersistencePairs.size() << "\n";
+	cout << "# of saddle-max pairs: " << this->smPersistencePairs.size() << "\n";
+	int count = 0;
+	for (vector<Edge*>::iterator it = K->eBegin(); it != K->eEnd(); it++) {
+		count++;
+	}
+	cout << "# of edges in complex: " << count << "\n";
+	cout << "average time to check zero column: " << average1 << "s\n";
+	cout << "average time to add columns: " << average2 << "s\n";
+	cout << "average time to add persistence pairs: " << average3 << "s\n";
+}
 
 //test cancellability
 vector<Simplex*>* PersistencePairs::isCancellable(const persistencePair01& pp, ofstream& cancelData){
@@ -600,26 +748,15 @@ void PersistencePairs::cancelAlongVPath(vector<Simplex*>* VPath){
 
 
 //cancels al pairs that can be cancelled
-void PersistencePairs::cancelPersistencePairs(float delta){
-	std::clock_t start;
-    double duration;
-    start = std::clock();
-    
+void PersistencePairs::cancelPersistencePairs(double delta){
+
+
 	cout << "\tSorting "<< msPersistencePairs.size() << " ms-persistence pairs...\n";
 	cout.flush();
 	sort(msPersistencePairs.begin(), msPersistencePairs.end(), PersistencePairs::persistencePairCompare01);
-	duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-    std::cout<<"\t ms Pair re-sorted in: "<< duration <<"sec\n";
-    
-    start = std::clock();
-	
 	cout << "\tSorting "<< smPersistencePairs.size() << " sm-persistence pairs...\n";
 	cout.flush();
 	sort(smPersistencePairs.begin(), smPersistencePairs.end(), PersistencePairs::persistencePairCompare12);
-	
-	duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-    std::cout<<"\t sm Pair re-sorted in: "<< duration <<"sec\n";
-	
 	cout << "\tDone\n";
 	cout.flush();
 
@@ -704,7 +841,7 @@ void PersistencePairs::cancelPersistencePairs(float delta){
 
 	cout << "\tCancelling...\n";
 	int i = 0, j = 0;
-	float average4 = 0, average5 = 0;
+	double average4 = 0, average5 = 0;
 	int a4Count = 0, a5Count = 0;
 	int count = 0;
 	//chrono::time_point<chrono::system_clock> start, end;
@@ -720,8 +857,8 @@ void PersistencePairs::cancelPersistencePairs(float delta){
 				vector<Simplex*> *VPath = this->isCancellable(pair1, cancelData);
 
 				//end = chrono::system_clock::now();
-				//chrono::duration<float> eDur = end - start;
-				//float elapsedTime = eDur.count();
+				//chrono::duration<double> eDur = end - start;
+				//double elapsedTime = eDur.count();
 				//average4 = (elapsedTime + a4Count * average4) / (a4Count + 1);
 				//a4Count++;
 				// if (DEBUG) cout<< pair1.persistence << endl;
@@ -739,8 +876,8 @@ void PersistencePairs::cancelPersistencePairs(float delta){
 				//start = chrono::system_clock::now();
 				vector<Simplex*> *VPath = this->isCancellable(pair2, cancelData);
 				/*end = chrono::system_clock::now();
-				chrono::duration<float> eDur = end - start;
-				float elapsedTime = eDur.count();
+				chrono::duration<double> eDur = end - start;
+				double elapsedTime = eDur.count();
 				average4 = (elapsedTime + a4Count * average4) / (a4Count + 1);
 				a4Count++;*/
 				// if (DEBUG) cout<< pair2.persistence << endl;
@@ -773,8 +910,8 @@ void PersistencePairs::cancelPersistencePairs(float delta){
 				//start = chrono::system_clock::now();
 				vector<Simplex*> *VPath = this->isCancellable(pair, cancelData);
 				/*end = chrono::system_clock::now();
-				chrono::duration<float> eDur = end - start;
-				float elapsedTime = eDur.count();
+				chrono::duration<double> eDur = end - start;
+				double elapsedTime = eDur.count();
 				average4 = (elapsedTime + a4Count * average4) / (a4Count + 1);
 				a4Count++;*/
 				if (!VPath->empty()){
@@ -800,8 +937,8 @@ void PersistencePairs::cancelPersistencePairs(float delta){
 				//start = chrono::system_clock::now();
 				vector<Simplex*> *VPath = this->isCancellable(pair, cancelData);
 				/*end = chrono::system_clock::now();
-				chrono::duration<float> eDur = end - start;
-				float elapsedTime = eDur.count();
+				chrono::duration<double> eDur = end - start;
+				double elapsedTime = eDur.count();
 				average4 = (elapsedTime + a4Count * average4) / (a4Count + 1);
 				a4Count++;*/
 				if (!VPath->empty()){
