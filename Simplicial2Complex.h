@@ -3,68 +3,17 @@
 #include <unordered_set>
 #include <set>
 #include <stack>
-// #include <ANN/ANN.h>
+#include <unordered_map>
+#include <map>
+
 #include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <iomanip>
-#include <unordered_map>
-#include <map>
-// #include "C:\Program Files\MATLAB\R2015b\extern\include\mat.h"
+
 #define DIM 3
-// #define min(a,b) (a <= b)? a : b
+
 using namespace std;
-
-/*namespace std{
-	namespace
-	{
-
-		// Code from boost
-		// Reciprocal of the golden ratio helps spread entropy
-		//     and handles duplicates.
-		// See Mike Seymour in magic-numbers-in-boosthash-combine:
-		//     http://stackoverflow.com/questions/4948780
-
-		template <class T>
-		inline void hash_combine(std::size_t& seed, T const& v)
-		{
-			seed ^= std::hash<T>()(v)+0x9e3779b9 + (seed << 6) + (seed >> 2);
-		}
-
-		// Recursive template code derived from Matthieu M.
-		template <class Tuple, size_t Index = std::tuple_size<Tuple>::value - 1>
-		struct HashValueImpl
-		{
-			static void apply(size_t& seed, Tuple const& tuple)
-			{
-				HashValueImpl<Tuple, Index - 1>::apply(seed, tuple);
-				hash_combine(seed, std::get<Index>(tuple));
-			}
-		};
-
-		template <class Tuple>
-		struct HashValueImpl<Tuple, 0>
-		{
-			static void apply(size_t& seed, Tuple const& tuple)
-			{
-				hash_combine(seed, std::get<0>(tuple));
-			}
-		};
-	}
-
-	template <typename ... TT>
-	struct hash<std::tuple<TT...>>
-	{
-		size_t
-			operator()(std::tuple<TT...> const& tt) const
-		{
-			size_t seed = 0;
-			HashValueImpl<std::tuple<TT...> >::apply(seed, tt);
-			return seed;
-		}
-
-	};
-}*/
 
 class Simplex;
 class Simplicial2Complex;
@@ -79,7 +28,10 @@ public:
 	dim = 0, 1, or 2, respectively*/
 	int dim;
 	double funcValue;
+	
+	// This is original - deprecated
 	static bool simplexPointerCompare(const Simplex* s, const Simplex* t);
+	static bool simplexPointerCompare2(const Simplex *s, const Simplex *t);
 	unsigned int filtrationPosition;
 	Simplex* prev = NULL;
 };
@@ -93,24 +45,12 @@ class Simplicial2Complex{
 
 public:
 	Simplicial2Complex();
-	void reserveVertexVector(int size){
-		this->vertexList.reserve(size);
-	}
-	void reserveEdgeVector(int size){
-		this->edgeList.reserve(size);
-	}
-	void reserveTriangleVector(int size){
-		this->triList.reserve(size);
-	}
 
 	int addVertex(Vertex *v);
-	int setVertices(vector<Vertex*>* list){
-		this->vertexList = *list;
-	}
 	int addEdge(Edge *e);
 	int addTriangle(Triangle* t);
-	bool multiEdgeCheck();
-	bool multiTriangleCheck();
+	// Require, no duplicate edge
+	// no duplicate triangles
 	Vertex* getVertex(int position);
 	Edge* getEdge(int position);
 	Triangle* getTriangle(int position);
@@ -124,13 +64,9 @@ public:
 	void buildComplexFromFile(string pathname);
 	void buildComplexFromFile2(string pathname);
 	void buildComplexFromFile2_BIN(string pathname);
-	void buildComplexDiscrete(string, string, double);
 	void outputComplex(string pathname);
 	void buildPsuedoMorseFunction();
-	void cancel0PersistencePairs();
-	void cancel0PersistencePairs2();
 	/*Requires: s is a critical simplex*/
-	set<Simplex*>* ascendingManifold(Simplex *s);
 	set<Simplex*>* descendingManifold(Simplex *s);
 	void flipAndTranslateVertexFunction();
 	DiscreteVField* getDiscreteVField();
@@ -158,9 +94,9 @@ public:
 	unordered_set<Simplex*>::iterator cEnd(){
 		return this->criticalSet.end();
 	}
-	void outputVertices(string pathname);
-	void outputEdges(string pathname);
-	void outputTriangles(string pathname);
+	void sortVertices(){
+		sort(vertexList.begin(), vertexList.end(), Simplex::simplexPointerCompare2);
+	}
 };
 
 class Vertex:public Simplex{
@@ -177,8 +113,6 @@ public:
 	void removeEdge(Edge* e);
 	Vertex* getAdjacentVertex(Edge* e);
 	bool isAdjacent(Vertex *v);
-	bool isDeleted();
-	void deleteVertex();
 	double* getCoords();
 	double getFuncValue();
 	void setFuncValue(double funcValue){
@@ -188,6 +122,7 @@ public:
 	int getVPosition();
 	void setVposition(int p);
 	Edge* findEdge(Vertex *v);
+	
 	bool hasEdge(Edge *e){
 		for(vector<Edge*>::iterator it = this->incidenceList.begin(); it != this->incidenceList.end(); it++){
 			if ((*it) == e){
@@ -196,23 +131,15 @@ public:
 		}
 		return false;
 	}
+	
 	vector<Edge*>::iterator begin(){
 		return this->incidenceList.begin();
 	}
+	
 	vector<Edge*>::iterator end(){
 		return this->incidenceList.end();
 	}
-	static bool vertexPointerCompare(Vertex *v1, Vertex *v2){
-		if (v1->funcValue < v2->funcValue){
-			return true;
-		}
-		else if (v1->funcValue == v2->funcValue){
-			return v1->vPosition < v2->vPosition;
-		}
-		else{
-			return false;
-		}
-	}
+
 	void output(){
 	    cout<< this->funcValue << "\t";
 	}
@@ -244,8 +171,6 @@ public:
 		return false;
 	}
 	int degree();
-	bool isDeleted();
-	void deleteEdge();
 	double getFuncValue();
 	void setFuncValue(double funcValue);
 	int getEPosition();
@@ -260,25 +185,7 @@ public:
 	vector<Triangle*>::iterator end(){
 		return this->incidenceList.end();
 	}
-	static bool edgePointerCompare(Edge *e1, Edge *e2){
-		if (e1->funcValue < e2->funcValue){
-			return true;
-		}
-		else if (e1->funcValue == e2->funcValue){
-			if (e1->symbolicPerturbation1 < e2->symbolicPerturbation1){
-				return true;
-			}
-			else if (e1->symbolicPerturbation1 == e2->symbolicPerturbation1){
-				return e1->ePosition < e2->ePosition;
-			}
-			else{
-				return false;
-			}
-		}
-		else{
-			return false;
-		}
-	}
+	
 	void output(){
 	    cout<< get<0>(vertices)->funcValue << " " << get<1>(vertices)->funcValue << "\t";
 	}
@@ -304,44 +211,25 @@ public:
 	Triangle(Vertex *v1, Vertex *v2, Vertex *v3, double funcValue);
 	tuple<Edge*, Edge*, Edge*> getEdges();
 	tuple<Vertex*, Vertex*, Vertex*> getVertices();
-	bool isDeleted();
-	void deleteTriangle();
 	double getFuncValue();
 	void setFuncValue(double funcValue);
 	int getTPosition();
 	void setTposition(int p);
-	Vertex* oppositeVertex(Edge* e);
+	
 	tuple<double, double> getSymPerturb(){ return make_tuple(this->symbolicPerturbation1, this->symbolicPerturbation2); }
 	void setSymPerturb(double f1, double f2){ this->symbolicPerturbation1 = f1; this->symbolicPerturbation2 = f2; }
-	static bool triPointerCompare(Triangle *t1, Triangle *t2){
-		if (t1->funcValue < t2->funcValue){
-			return true;
-		}
-		else if (t1->funcValue == t2->funcValue){
-			if (t1->symbolicPerturbation1 < t2->symbolicPerturbation1){
-				return true;
-			}
-			else if (t1->symbolicPerturbation1 == t2->symbolicPerturbation1){
-				if (t1->symbolicPerturbation2 < t2->symbolicPerturbation2){
-					return true;
-				}
-				else if (t1->symbolicPerturbation2 == t2->symbolicPerturbation2){
-					return t1->tPosition < t2->tPosition;
-				}
-				else{
-					return false;
-				}
-			}
-			else{
-				return false;
-			}
-		}
-		else{
-			return false;
-		}
-	}
+
 	void output(){
 	    cout<< get<0>(vertices)->funcValue << " " << get<1>(vertices)->funcValue << " " << get<2>(vertices)->funcValue << "\t";
+	}
+	
+	void SortVertex(){
+		Vertex *v1, *v2, *v3;
+		v1 = get<0>(vertices); v2 = get<1>(vertices); v3 = get<2>(vertices); 
+		if (simplexPointerCompare2(v1, v2)) swap(v1, v2);
+		if (simplexPointerCompare2(v1, v3)) swap(v1, v3);
+		if (simplexPointerCompare2(v2, v3)) swap(v2, v3);
+		vertices = make_tuple(v1, v2, v3);
 	}
 };
 
@@ -388,24 +276,6 @@ int Simplicial2Complex::addTriangle(Triangle *t){
 	int position = this->triList.size();
 	this->triList.push_back(t);
 	return position;
-}
-
-bool Simplicial2Complex::multiEdgeCheck() {
-	for (int i = 0; i < this->edgeList.size(); i++) {
-		if (i % 1000 == 0) cout << i << "\n";
-		for (int j = i + 1; j < this->edgeList.size(); j++) {
-			Edge *e1 = this->edgeList[i];
-			Edge *e2 = this->edgeList[j];
-			Vertex *v11 = get<0>(e1->getVertices());
-			Vertex *v12 = get<1>(e1->getVertices());
-			Vertex *v21 = get<0>(e2->getVertices());
-			Vertex *v22 = get<1>(e2->getVertices());
-			if (v11 == v21 && v12 == v22 || v11 == v22 && v12 == v21) {
-				return true;
-			}
-		}
-	}
-	return false;
 }
 
 Vertex* Simplicial2Complex::getVertex(int position){
@@ -727,125 +597,6 @@ void Simplicial2Complex::buildComplexFromFile2_BIN(string pathname) {
 }
 
 
-/*
-void Simplicial2Complex::buildRipsComplex(double radius, double eps){
-	this->edgeList.clear();
-	this->triList.clear();
-
-	//Build kd-tree
-	int numOfVertices = this->vertexList.size();
-	ANNpointArray data = annAllocPts(numOfVertices, DIM);
-	for (int i = 0; i < numOfVertices; i++){
-		ANNpoint currentPoint = data[i];
-		Vertex *v = this->vertexList.at(i);
-		double *coords = v->getCoords();
-		for (int j = 0; j < DIM; j++) {
-			currentPoint[j] = coords[j];
-		}
-	}
-
-	ANNkd_tree *kdTree = new ANNkd_tree(data, numOfVertices, DIM);
-
-	ANNdist sqRad = (double)radius * radius;
-	for (int i = 0; i < numOfVertices; i++){
-		if(i % 1000 == 0) cout << "Handling vertex " << i << "\n";
-		ANNpoint queryPt = data[i];
-		Vertex *queryVert = this->vertexList.at(i);
-		ANNidxArray nnIdx = new ANNidx[100];
-		ANNdistArray dists = new ANNdist[100];
-
-		int numOfNN = kdTree->annkFRSearch(queryPt, sqRad, 100, nnIdx, dists, eps);
-
-		for (int j = 0; j < ((numOfNN < 100)? numOfNN : 100); j++){
-
-			Vertex *NNVert = this->vertexList.at(nnIdx[j]);
-			//If NNVert is not the query Vertex and is not already adjacent
-			if (!(NNVert == queryVert || queryVert->isAdjacent(NNVert))){
-				//Create Edge between them
-				Edge *e = new Edge(queryVert, NNVert);
-				//But don't add it yet, because we need to test paths of length 2 from the query Vertex
-				//If there is already a path of length 2 from the query vertex to the NNVert, then add a triangle
-				for (vector<Edge*>::iterator it = queryVert->begin(); it != queryVert->end(); it++){
-					Vertex *midVert = queryVert->getAdjacentVertex(*it);
-					for (vector<Edge*>::iterator it2 = midVert->begin(); it2 != midVert->end(); it2++){
-						Vertex *endVert = midVert->getAdjacentVertex(*it2);
-						//If the end Vertex is equal to the NN Vertex, then we need to add a triangle corresponding to the path we took
-						if (endVert == NNVert){
-							Triangle *t = new Triangle(e, *it, *it2);
-							e->addTriangle(t);
-							(*it)->addTriangle(t);
-							(*it2)->addTriangle(t);
-							int tPosition = this->addTriangle(t);
-							t->setTposition(tPosition);
-						}
-					}
-				}
-
-				//Now add the new Edge
-				queryVert->addEdge(e);
-				NNVert->addEdge(e);
-				int ePosition = this->addEdge(e);
-				e->setEposition(ePosition);
-			}
-		}
-		delete[] nnIdx;
-		delete[] dists;
-	}
-	annDeallocPts(data);
-}
-*/
-
-//void Simplicial2Complex::buildComplexDiscrete(string distPathname, string funcPathname, double radius) {
-//	const char *distPname = distPathname.c_str();
-//	const char *funcPname = funcPathname.c_str();
-//
-//	MATFile *kdeFile = matOpen(funcPname, "r");
-//	mxArray *kdeValues = matGetVariable(kdeFile, "data");
-//	int numOfVertices = (int)mxGetN(kdeValues);
-//	double *arrayPtr = mxGetPr(kdeValues);
-//
-//	for (int i = 0; i < numOfVertices; i++) {
-//		double funcValue = arrayPtr[i];
-//		Vertex *v = new Vertex(funcValue);
-//		int vPosition = this->addVertex(v);
-//		v->setVposition(vPosition);
-//	}
-//
-//	mxDestroyArray(kdeValues);
-//
-//	MATFile *distFile = matOpen(distPname, "r");
-//	mxArray *dists = matGetVariable(distFile, "data");
-//	arrayPtr = mxGetPr(dists);
-//	int numOfRows = (int)mxGetM(dists);
-//
-//	for (int i = 0; i < numOfVertices; i++) {
-//		for (int j = i + 1; j < numOfVertices; j++) {
-//			double distance = 1 - arrayPtr[i + j * numOfRows];
-//			if (distance < radius) {
-//				Vertex *v1 = this->vertexList[i];
-//				Vertex *v2 = this->vertexList[j];
-//				Edge *e = new Edge(v1, v2);
-//				for (vector<Edge*>::iterator it = v1->begin(); it != v1->end(); it++) {
-//					Vertex *midVert = v1->getAdjacentVertex(*it);
-//					for (vector<Edge*>::iterator it2 = midVert->begin(); it2 != midVert->end(); it2++) {
-//						Vertex *endVert = midVert->getAdjacentVertex(*it2);
-//						if (endVert == v2) {
-//							Triangle *t = new Triangle(e, *it, *it2);
-//							int tPosition = this->addTriangle(t);
-//							t->setTposition(tPosition);
-//						}
-//					}
-//				}
-//				int ePosition = this->addEdge(e);
-//				e->setEposition(ePosition);
-//			}
-//		}
-//	}
-//
-//	mxDestroyArray(dists);
-//
-//}
-
 void Simplicial2Complex::buildPsuedoMorseFunction(){
 	cout << "\t Processing "<< edgeList.size() <<" edges\n";
 	for (unsigned int i = 0; i < this->edgeList.size(); i++){
@@ -885,138 +636,6 @@ void Simplicial2Complex::buildPsuedoMorseFunction(){
 	}
 }
 
-void Simplicial2Complex::cancel0PersistencePairs(){
-	//Mark every simplex as a critical point first
-	for (int i = 0;(unsigned) i < this->vertexList.size(); i++){
-		this->criticalSet.insert((Simplex*)this->vertexList.at(i));
-	}
-	for (int i = 0;(unsigned) i < this->edgeList.size(); i++){
-		this->criticalSet.insert((Simplex*)this->edgeList.at(i));
-	}
-	for (int i = 0;(unsigned) i < this->triList.size(); i++){
-		this->criticalSet.insert((Simplex*)this->triList.at(i));
-	}
-
-	//Start with the vertices and edges
-	for (int i = 0;(unsigned) i < this->vertexList.size(); i++){
-		Vertex *v = this->vertexList.at(i);
-		Vertex *min = v;
-		for (vector<Edge*>::iterator j = v->begin(); j != v->end(); j++){
-			Vertex *w = v->getAdjacentVertex(*j);
-			if (w->getFuncValue() < v->getFuncValue()){
-				min = w;
-			}
-		}
-		if (min != v){
-			Edge *e = v->findEdge(min);
-			this->V->addPair(v, e);
-			this->criticalSet.erase((Simplex*)v);
-			this->criticalSet.erase((Simplex*)e);
-		}
-	}
-
-	//Now do edges and triangles
-	for (int i = 0; (unsigned)i < this->triList.size(); i++){
-		Triangle *t = this->triList.at(i);
-		tuple<Edge*, Edge*, Edge*> edges = t->getEdges();
-		Edge *e1 = get<0>(edges);
-		Edge *e2 = get<1>(edges);
-		Edge *e3 = get<2>(edges);
-		/*Only consider the critical edges*/
-		vector<Edge*> criticalEdges;
-		if (this->criticalSet.count((Simplex*)e1) == 1){ criticalEdges.push_back(e1); }
-		if (this->criticalSet.count((Simplex*)e2) == 1){ criticalEdges.push_back(e2); }
-		if (this->criticalSet.count((Simplex*)e3) == 1){ criticalEdges.push_back(e3); }
-		/*Now figure out which critical edge has the greatest difference between it and the opposite vertex*/
-		if (criticalEdges.size() > 0){
-			double maxDif = 0;
-			Edge* maxDifEdge = criticalEdges.at(0);
-			for (int i = 0; (unsigned)i < criticalEdges.size(); i++){
-				Edge *critEdge = criticalEdges.at(i);
-				Vertex *opVertex = critEdge->oppsiteVertex(t);
-				if (critEdge->getFuncValue() == t->getFuncValue() && critEdge->getFuncValue() - opVertex->getFuncValue() > maxDif){
-					maxDifEdge = critEdge;
-				}
-			}
-			/*Check again that maxDifEdge and t are a valid 0-persistence pair*/
-			if (maxDifEdge->getFuncValue() == t->getFuncValue()){
-				this->V->addPair(maxDifEdge, t);
-				this->criticalSet.erase((Simplex*)maxDifEdge);
-				this->criticalSet.erase((Simplex*)t);
-			}
-		}
-	}
-}
-
-void Simplicial2Complex::cancel0PersistencePairs2(){
-	/*Start with the vertices in ascending order*/
-	vector<Vertex*> sortedV(this->vertexList);
-	sort(sortedV.begin(), sortedV.end(), Vertex::vertexPointerCompare);
-	for (vector<Vertex*>::iterator it = sortedV.begin(); it != sortedV.end(); it++){
-		Vertex *v = *it;
-		/*For each vertex v with nonzero degree, find the minimum edge differing from v by an infinitesimal*/
-		if (v->degree() > 0){
-			Edge *min = *(v->begin());
-			for (vector<Edge*>::iterator it2 = v->begin(); it2 != v->end(); it2++){
-				Edge* e = *it2;
-				if (Edge::edgePointerCompare(e, min)){
-					min = e;
-				}
-			}
-			/*If the minimum edge differs infinitesimally, add the pair to the discrete gradient vector field*/
-			if (min->getFuncValue() == v->getFuncValue()){
-				this->V->addPair(v, min);
-			}
-			/*Otherwise, v is critical*/
-			else{
-				this->criticalSet.insert((Simplex*)v);
-			}
-		}
-		/*If v has degree zero, then it is critical*/
-		else{
-			this->criticalSet.insert((Simplex*)v);
-		}
-	}
-
-	/*Now do the same with the edges*/
-	vector<Edge*> sortedE(this->edgeList);
-	sort(sortedE.begin(), sortedE.end(), Edge::edgePointerCompare);
-	for (vector<Edge*>::iterator it = sortedE.begin(); it != sortedE.end(); it++){
-		Edge *e = *it;
-		/*For each edge e with at least 1 cofacet, find the minimum triangle differing from e by an second order infinitesimal*/
-		if (e->degree() > 0){
-			Triangle *min = *(e->begin());
-			for (vector<Triangle*>::iterator it2 = e->begin(); it2 != e->end(); it2++){
-				Triangle *t = *it2;
-				if (Triangle::triPointerCompare(t, min)){
-					min = t;
-				}
-			}
-			/*Now you have the minimum triangle in min, check if it differs only by a second order infitesimal*/
-			if (min->getFuncValue() == e->getFuncValue() && get<0>(min->getSymPerturb()) == e->getSymPerturb()){
-				this->V->addPair(e, min);
-			}
-			/*Otherwise, e is critical*/
-			else{
-				this->criticalSet.insert((Simplex*)e);
-			}
-		}
-		/*If e has no cofacets, then it is critical*/
-		else{
-			this->criticalSet.insert((Simplex*)e);
-		}
-	}
-
-	/*Finally the triangles. We don't need to sort them since any non-critical triangle is already in the discrete vector field*/
-	for (vector<Triangle*>::iterator it = this->triList.begin(); it != this->triList.end(); it++){
-		Triangle *t = *it;
-		tuple<Edge*, Edge*, Edge*> edges = t->getEdges();
-		if (!((this->V->containsPair(get<0>(edges))==t) || (this->V->containsPair(get<1>(edges))==t) || (this->V->containsPair(get<2>(edges))==t))){
-			/*Then t is not in any pair in V, so it is critical*/
-			this->criticalSet.insert((Simplex*)t);
-		}
-	}
-}
 
 set<Simplex*>* Simplicial2Complex::descendingManifold(Simplex* s){
 	// Discrete Vector Field: V exist here
@@ -1174,56 +793,6 @@ void Simplicial2Complex::flipAndTranslateVertexFunction(){
 	}
 }
 
-//void Simplicial2Complex::outputVertices(string pathname){
-//	ofstream output(pathname);
-//	output << std::setprecision(10);
-//	for (vector<Vertex*>::iterator it = this->vertexList.begin(); it != this->vertexList.end(); it++){
-//		Vertex *v = *it;
-//		double xCoord = get<0>(v->getCoords());
-//		double yCoord = get<1>(v->getCoords());
-//		double funcValue = v->getFuncValue();
-//		output << xCoord << " " << yCoord << " " << funcValue << endl;
-//	}
-//	output.close();
-//}
-//
-//void Simplicial2Complex::outputEdges(string pathname){
-//	ofstream output(pathname);
-//	for (vector<Edge*>::iterator it = this->edgeList.begin(); it != this->edgeList.end(); it++){
-//		Edge *e = *it;
-//		Vertex *v1 = get<0>(e->getVertices());
-//		Vertex *v2 = get<1>(e->getVertices());
-//		double xCoord1 = get<0>(v1->getCoords());
-//		double yCoord1 = get<1>(v1->getCoords());
-//		double xCoord2 = get<0>(v2->getCoords());
-//		double yCoord2 = get<1>(v2->getCoords());
-//		double funcValue = e->getFuncValue();
-//
-//		output << xCoord1 << " " << yCoord1 << " " << xCoord2 << " " << yCoord2 << " " << funcValue << endl;
-//	}
-//	output.close();
-//}
-//
-//void Simplicial2Complex::outputTriangles(string pathname){
-//	ofstream output(pathname);
-//	for (vector<Triangle*>::iterator it = this->triList.begin(); it != this->triList.end(); it++){
-//		Triangle *t = *it;
-//		Vertex *v1 = get<0>(t->getVertices());
-//		Vertex *v2 = get<1>(t->getVertices());
-//		Vertex *v3 = get<2>(t->getVertices());
-//		double xCoord1 = get<0>(v1->getCoords());
-//		double yCoord1 = get<1>(v1->getCoords());
-//		double xCoord2 = get<0>(v2->getCoords());
-//		double yCoord2 = get<1>(v2->getCoords());
-//		double xCoord3 = get<0>(v3->getCoords());
-//		double yCoord3 = get<1>(v3->getCoords());
-//		double funcValue = t->getFuncValue();
-//
-//		output << xCoord1 << " " << yCoord1 << " " << xCoord2 << " " << yCoord2 << " " << xCoord3 << " " << yCoord3 << " " << funcValue << endl;
-//	}
-//	output.close();
-//}
-//
 
 Vertex::Vertex(double *coords, double funcValue){
 	for (int i = 0; i < DIM; i++) {
@@ -1265,14 +834,6 @@ bool Vertex::isAdjacent(Vertex *v){
 	return false;
 }
 
-//bool Vertex::isDeleted(){
-//	return this->deleted;
-//}
-
-//void Vertex::deleteVertex(){
-//	this->deleted = true;
-//}
-
 double* Vertex::getCoords(){
 	return this->coords;
 }
@@ -1304,12 +865,18 @@ Edge* Vertex::findEdge(Vertex *v){
 }
 
 Edge::Edge(Vertex *v1, Vertex *v2){
-	this->vertices = make_tuple(v1, v2);
+	if (simplexPointerCompare2(v2, v1))
+		this->vertices = make_tuple(v1, v2);
+	else
+		this->vertices = make_tuple(v2, v1);
 	this->dim = 1;
 }
 
 Edge::Edge(Vertex *v1, Vertex *v2, double funcValue){
-	this->vertices = make_tuple(v1, v2);
+	if (simplexPointerCompare2(v2, v1))
+		this->vertices = make_tuple(v1, v2);
+	else
+		this->vertices = make_tuple(v2, v1);
 	this->funcValue = funcValue;
 	this->dim = 1;
 }
@@ -1348,14 +915,6 @@ int Edge::degree(){
 	return this->incidenceList.size();
 }
 
-//bool Edge::isDeleted(){
-//	return this->deleted;
-//}
-
-//void Edge::deleteEdge(){
-//	this->deleted = true;
-//}
-
 double Edge::getFuncValue(){
 	return this->funcValue;
 }
@@ -1388,6 +947,7 @@ Triangle::Triangle(Edge *e1, Edge* e2, Edge *e3){
 	Vertex *v3 = e3->findVertex(e1);
 	this->vertices = make_tuple(v1, v2, v3);
 	this->dim = 2;
+	SortVertex();
 }
 
 Triangle::Triangle(Vertex *v1, Vertex *v2, Vertex *v3){
@@ -1397,6 +957,7 @@ Triangle::Triangle(Vertex *v1, Vertex *v2, Vertex *v3){
 	Edge *e3 = v3->findEdge(v1);
 	this->edges = make_tuple(e1, e2, e3);
 	this->dim = 2;
+	SortVertex();
 }
 
 Triangle::Triangle(Edge *e1, Edge* e2, Edge *e3, double funcValue){
@@ -1407,6 +968,7 @@ Triangle::Triangle(Edge *e1, Edge* e2, Edge *e3, double funcValue){
 	this->vertices = make_tuple(v1, v2, v3);
 	this->funcValue = funcValue;
 	this->dim = 2;
+	SortVertex();
 }
 
 Triangle::Triangle(Vertex *v1, Vertex *v2, Vertex *v3, double funcValue){
@@ -1417,6 +979,7 @@ Triangle::Triangle(Vertex *v1, Vertex *v2, Vertex *v3, double funcValue){
 	this->edges = make_tuple(e1, e2, e3);
 	this->funcValue = funcValue;
 	this->dim = 2;
+	SortVertex();
 }
 
 tuple<Edge*, Edge*, Edge*> Triangle::getEdges(){
@@ -1427,13 +990,6 @@ tuple<Vertex*, Vertex*, Vertex*> Triangle::getVertices(){
 	return this->vertices;
 }
 
-//bool Triangle::isDeleted(){
-//	return this->deleted;
-//}
-
-//void Triangle::deleteTriangle(){
-//	this->deleted = true;
-//}
 
 double Triangle::getFuncValue(){
 	return this->funcValue;
@@ -1586,7 +1142,7 @@ bool Simplex::simplexPointerCompare(const Simplex *s, const Simplex *t){
 
 
 	//By function value
-	if (s->funcValue < t->funcValue){
+	if (s->funcValue < t->funcValue - 1e-8){
 		return true;
 	}
 	else if (fabs(s->funcValue - t->funcValue) < 1e-8){
@@ -1642,5 +1198,93 @@ bool Simplex::simplexPointerCompare(const Simplex *s, const Simplex *t){
 	}
 	else{
 		return false;
+	}
+}
+
+bool Simplex::simplexPointerCompare2(const Simplex *s, const Simplex *t){
+	//By function value
+	double f1 = s->funcValue, f2 = t->funcValue;
+	if (f1 < f2 - 1e-8){
+		return true;
+	}else if(f1 > f2 + 1e-8){
+		return false;
+	}
+	else{
+		//By dimension
+		short int d1 = s->dim, d2 = t->dim;
+		if (d1 < d2){
+			return true;
+		}else if(d1 > d2){
+			return false;
+		}
+		else{
+			//3 cases
+			if (d1 == 0){
+				//by vPosition
+				return ((Vertex*)s)->getVPosition() < ((Vertex*)t)->getVPosition();
+			}
+			else if (d1 == 1){
+				//by symbolic perturbation
+				Edge* e1 = (Edge*)s;
+				Edge* e2 = (Edge*)t;
+				tuple<Vertex*, Vertex*> e1v = e1->getVertices();
+				tuple<Vertex*, Vertex*> e2v = e2->getVertices();
+				float sp1 = e1->getSymPerturb();
+				float sp2 = e2->getSymPerturb();
+				if (sp1 < sp2 - 1e-8){
+					return true;
+				}else if (sp1 > sp2 + 1e-8){
+					return false;
+				}
+				else{
+				//for(int i = 0; i < 2; ++i){
+					if (get<0>(e1v) != get<0>(e2v))
+						return simplexPointerCompare2(get<0>(e1v), get<0>(e2v));
+					if (get<1>(e1v) != get<1>(e2v))
+						return simplexPointerCompare2(get<1>(e1v), get<1>(e2v));
+				//}
+				cout << "Caught edge with same set of vertices\n";
+				return false;}
+			}
+			else{
+				//by first-order symbolic perturbation
+				Triangle* t1 = (Triangle*) s;
+				Triangle* t2 = (Triangle*) t;
+				
+				tuple<Vertex*, Vertex*, Vertex*> t1v = t1->getVertices();
+				tuple<Vertex*, Vertex*, Vertex*> t2v = t2->getVertices();
+				
+				tuple<float, float> Tri_sp1 = t1->getSymPerturb();
+				tuple<float, float> Tri_sp2 = t2->getSymPerturb();
+				if (get<0>(Tri_sp1) < get<0>(Tri_sp2) - 1e-8){
+					return true;
+				}else if(get<0>(Tri_sp1) > get<0>(Tri_sp2) + 1e-8){
+					return false;
+				}
+				else{
+					//by second-order symbolic perturbation
+					if (get<1>(Tri_sp1) < get<1>(Tri_sp2) - 1e-8){
+						return true;
+					}else if(get<1>(Tri_sp1) > get<1>(Tri_sp2) + 1e-8){
+						return false;
+					}
+					else{
+						//by tPosition
+						//for(int i = 0; i < 3; ++i){
+						if (get<0>(t1v) != get<0>(t2v))
+							return simplexPointerCompare2(get<0>(t1v), get<0>(t2v));
+						if (get<1>(t1v) != get<1>(t2v))
+							return simplexPointerCompare2(get<1>(t1v), get<1>(t2v));
+						if (get<2>(t1v) != get<2>(t2v))
+							return simplexPointerCompare2(get<2>(t1v), get<2>(t2v));
+						//}
+						cout << "Caught triangle with same set of vertices\n";
+						return false;
+					}
+				
+				
+				}
+			}
+		}
 	}
 }

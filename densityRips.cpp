@@ -1,4 +1,4 @@
-#define DEBUG 0
+#define DEBUG 1
 
 #include "persistence.h"
 //#include "bitmap_image.hpp"
@@ -48,7 +48,8 @@ int main(int argc, char* argv[]){
 
 	PersistencePairs P(&K);
 	cout << "Building filtration...\n";
-	P.buildFiltration();
+	// P.buildFiltration();
+	P.buildFiltrationWithLowerStar();
 	cout << "Done\n";
 	cout.flush();
 	
