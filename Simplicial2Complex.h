@@ -11,7 +11,8 @@
 #include <iostream>
 #include <iomanip>
 
-#define DIM 3
+#define MAX_DIM 3
+#define EPS_compare 1e-8
 
 using namespace std;
 
@@ -100,9 +101,10 @@ public:
 };
 
 class Vertex:public Simplex{
-	double coords[DIM];
+	double coords[MAX_DIM];
 	vector<Edge*> incidenceList;
 	int vPosition;
+	int oriPosition;
 public:
 	Vertex(double *coords, double funcValue);
 	Vertex(double funcValue) {
@@ -121,6 +123,12 @@ public:
 	int degree();
 	int getVPosition();
 	void setVposition(int p);
+	int getoriPosition(){
+		return oriPosition;
+	}
+	void setoriposition(int p){
+		oriPosition = p;
+	}
 	Edge* findEdge(Vertex *v);
 	
 	bool hasEdge(Edge *e){
@@ -149,12 +157,11 @@ class Edge:public Simplex{
 	tuple<Vertex*, Vertex*> vertices;
 	vector<Triangle*> incidenceList;
 	int ePosition;
-	/*This symbolic perturbation represents a multiple of some infinitesimal eps>0
-	This is used to distinguish between edges with the same function value. It is equal to the
-	sum of the function values of the two vertices*/
-	double symbolicPerturbation1;
+
 
 public:
+	double persistence;
+	int critical_type;
 	Edge(Vertex* v1, Vertex* v2);
 	Edge(Vertex* v1, Vertex* v2, double funcValue);
 	tuple<Vertex*, Vertex*> getVertices();
@@ -177,8 +184,7 @@ public:
 	void setEposition(int p);
 	/*requires that this and e share a Vertex*/
 	Vertex* findVertex(Edge* e);
-	double getSymPerturb(){ return this->symbolicPerturbation1; }
-	void setSymPerturb(double f){ this->symbolicPerturbation1 = f; }
+
 	vector<Triangle*>::iterator begin(){
 		return this->incidenceList.begin();
 	}
@@ -195,14 +201,6 @@ class Triangle:public Simplex{
 	tuple<Edge*, Edge*, Edge*> edges;
 	tuple<Vertex*, Vertex*, Vertex*> vertices;
 	int tPosition;
-	/*These symbolic perturbations represent multiples of some infinitesimal eps > 0, where
-	f(this) = this->funcValue + symbolicPerturbation1 * eps + symbolicPerturbation2 * eps^2
-	This is used to raise the triangle above its edges and distinguish it from other triangles
-	with the same function value.
-	symbolicPerturbation1 = the symbolic perturbation of the edge with the highest function value
-	symbolicPerturbation2 = the sum of the vertices*/
-	double symbolicPerturbation1;
-	double symbolicPerturbation2;
 
 public:
 	Triangle(Edge *e1, Edge *e2, Edge *e3);
@@ -216,9 +214,6 @@ public:
 	int getTPosition();
 	void setTposition(int p);
 	
-	tuple<double, double> getSymPerturb(){ return make_tuple(this->symbolicPerturbation1, this->symbolicPerturbation2); }
-	void setSymPerturb(double f1, double f2){ this->symbolicPerturbation1 = f1; this->symbolicPerturbation2 = f2; }
-
 	void output(){
 	    cout<< get<0>(vertices)->funcValue << " " << get<1>(vertices)->funcValue << " " << get<2>(vertices)->funcValue << "\t";
 	}
@@ -230,6 +225,7 @@ public:
 		if (simplexPointerCompare2(v1, v3)) swap(v1, v3);
 		if (simplexPointerCompare2(v2, v3)) swap(v2, v3);
 		vertices = make_tuple(v1, v2, v3);
+		// the first is the one with highest density
 	}
 };
 
@@ -353,18 +349,27 @@ void Simplicial2Complex::outputArcs(string vertexFile, string edgeFile){
 	ofstream eFile(edgeFile);
 	set<Simplex*> manifolds;
 	cout<< "Writing 1-stable manifold\n";
+	ofstream output_info("output_info.txt", ios_base::out | ios_base::trunc);
+	int counter = 0;
 	for(unordered_set<Simplex*>::iterator it = this->cBegin(); it != this->cEnd(); it++){
 		Simplex *s = *it;
 		// && s->critical_type == 1 ---> try this?
 		if(s->dim == 1){
 			Edge *e = (Edge*)s;
+			// Some edge not critical are inserted?!
+			if (e->critical_type == 2 && e->persistence < delta - EPS_compare) continue;
+			output_info << e->persistence << " " << e->getEPosition() << " "
+						<< get<0>(e->getVertices())->funcValue << "\n";
 			set<Simplex*> *manifold = this->descendingManifold((Simplex*)e);
 			for (set<Simplex*>::iterator it2 = manifold->begin(); it2 != manifold->end(); it2++){
 				manifolds.insert(*it2);
 			}
 			delete manifold;
+			counter++;
 		}
 	}
+	output_info.close();
+	cout << "Written " << counter << "arcs\n";
 	vector<Vertex*> vertices;
 	vector<Edge*>edges;
 	for(set<Simplex*>::iterator it = manifolds.begin(); it != manifolds.end(); it++){
@@ -411,7 +416,7 @@ void Simplicial2Complex::buildComplexFromFile(string pathname) {
 	file >> numOfVertices;
 	cout << "\tReading " << numOfVertices << "vertices" << endl;
 	for (int i = 0; i < numOfVertices; i++) {
-		double coords[DIM];
+		double coords[MAX_DIM];
 		double funcValue;
 		for (int j = 0; j < DIM; j++) {
 			file >> coords[j];
@@ -455,6 +460,7 @@ void Simplicial2Complex::buildComplexFromFile(string pathname) {
 		int tPosition = this->addTriangle(t);
 		t->setTposition(tPosition);
 	}
+	sortVertices();
 	cout << "\tDone." << endl;
 
 	file.close();
@@ -467,7 +473,7 @@ void Simplicial2Complex::buildComplexFromFile2(string pathname) {
 	cout << "\tReading " << numOfVertices << "vertices" << endl;
 
 	for (int i = 0; i < numOfVertices; i++) {
-		double coords[DIM];
+		double coords[MAX_DIM];
 		double funcValue;
 		for (int j = 0; j < DIM; j++) {
 			file >> coords[j];
@@ -533,7 +539,7 @@ void Simplicial2Complex::buildComplexFromFile2_BIN(string pathname) {
 	cout << "\tReading " << numOfVertices << "vertices" << endl;
 
 	for (int i = 0; i < numOfVertices; i++) {
-		double coords[DIM];
+		double coords[MAX_DIM];
 		double funcValue;
 		for (int j = 0; j < DIM; j++) {
 			file.read(double_buffer, sizeof(double));
@@ -541,10 +547,31 @@ void Simplicial2Complex::buildComplexFromFile2_BIN(string pathname) {
 		}
 		file.read(double_buffer, sizeof(double));
 		funcValue = *double_reader;
+		funcValue = (int)(funcValue*1e5)/1.0e5;
 		Vertex *v = new Vertex(coords, funcValue);
 		int vPosition = this->addVertex(v);
+		// this will be over written by sorted order later
 		v->setVposition(vPosition);
+		v->setoriposition(vPosition);
 	}
+	
+	
+	// Use flipped function --- maxma -> minima
+	// So we can look at vertex-edge pair
+	flipAndTranslateVertexFunction();
+	
+	
+	cout << "\tSorting " << numOfVertices << "vertices" << endl;
+
+	vector<Vertex*> sortedvert(vertexList);
+	sort(sortedvert.begin(), sortedvert.end(), Simplex::simplexPointerCompare2);
+	int counter = 0;
+	for (auto i = sortedvert.begin(); i < sortedvert.end(); ++i){
+		(*i)->setVposition(counter);
+		counter++;
+	}
+
+	
 	cout << "\tDone." << endl;
 
 	int numOfEdges;
@@ -592,6 +619,7 @@ void Simplicial2Complex::buildComplexFromFile2_BIN(string pathname) {
 		int tPosition = this->addTriangle(t);
 		t->setTposition(tPosition);
 	}
+	vertexList = sortedvert;
 	cout << "\tDone." << endl;
 	file.close();
 }
@@ -609,7 +637,6 @@ void Simplicial2Complex::buildPsuedoMorseFunction(){
 			max = v2;
 		}
 		e->setFuncValue(max->getFuncValue());
-		e->setSymPerturb(total);
 		//e->output();
 		//cout<<"E: "<< max->getFuncValue() << " " << total << endl;
 	}
@@ -623,16 +650,15 @@ void Simplicial2Complex::buildPsuedoMorseFunction(){
 		Edge *e3 = get<2>(edges);
 		tuple<Vertex*, Vertex*, Vertex*> vertices = t->getVertices();
 		double total = get<0>(vertices)->getFuncValue() + get<1>(vertices)->getFuncValue() + get<2>(vertices)->getFuncValue();
-		if (e2->getFuncValue() > max->getFuncValue() || e2->getFuncValue() == max->getFuncValue() && e2->getSymPerturb() > max->getSymPerturb()){
+		if (e2->getFuncValue() > max->getFuncValue()){
 			max = e2;
 		}
-		if (e3->getFuncValue() > max->getFuncValue() || e3->getFuncValue() == max->getFuncValue() && e3->getSymPerturb() > max->getSymPerturb()){
+		if (e3->getFuncValue() > max->getFuncValue()){
 			max = e3;
 		}
 		t->setFuncValue(max->getFuncValue());
 		//t->output();
 		//cout<<"T: "<<max->getFuncValue()<<" "<<max->getSymPerturb()<<" "<< total<<endl;
-		t->setSymPerturb(max->getSymPerturb(), total);
 	}
 }
 
@@ -1118,95 +1144,13 @@ void DiscreteVField::outputETmap(){
 	output.close();
 }
 
-bool Simplex::simplexPointerCompare(const Simplex *s, const Simplex *t){
-	/*We sort simplices lexicographically according to the following scheme
-	1st		by function value
-	2nd		by dimension
-	3rd		3 cases
-			Vertex
-				1st by vPosition
-			Edge
-				1st by symbolic perturbation
-				2nd by ePosition
-			Triangle
-				1st by first-order symbolic perturbation
-				2nd by second-order symbolic perturbation
-				3rd by tPosition
-
-	These are each broken down into if-elseif-else statements
-	if (<less than>){ return true;}
-	else if (<equal to>){ next on list }
-	else { return false;}
-	*/
-
-
-
-	//By function value
-	if (s->funcValue < t->funcValue - 1e-8){
-		return true;
-	}
-	else if (fabs(s->funcValue - t->funcValue) < 1e-8){
-		//By dimension
-		if (s->dim < t->dim){
-			return true;
-		}
-		else if (s->dim == t->dim){
-			//3 cases
-			if (s->dim == 0){
-				//by vPosition
-				return ((Vertex*)s)->getVPosition() < ((Vertex*)t)->getVPosition();
-			}
-			else if (s->dim == 1){
-				//by symbolic perturbation
-				if (((Edge*)s)->getSymPerturb() < ((Edge*)t)->getSymPerturb()){
-					return true;
-				}
-				else if (fabs(((Edge*)s)->getSymPerturb() - ((Edge*)t)->getSymPerturb()) < 1e-8){
-					//by ePosition
-					return ((Edge*)s)->getEPosition() < ((Edge*)t)->getEPosition();
-				}
-				else{
-					return false;
-				}
-			}
-			else{
-				//by first-order symbolic perturbation
-				if (get<0>(((Triangle*)s)->getSymPerturb()) < get<0>(((Triangle*)t)->getSymPerturb())){
-					return true;
-				}
-				else if (fabs(get<0>(((Triangle*)s)->getSymPerturb()) - get<0>(((Triangle*)t)->getSymPerturb())) < 1e-8){
-					//by second-order symbolic perturbation
-					if (get<1>(((Triangle*)s)->getSymPerturb()) < get<1>(((Triangle*)t)->getSymPerturb())){
-						return true;
-					}
-					else if (fabs(get<1>(((Triangle*)s)->getSymPerturb()) - get<1>(((Triangle*)t)->getSymPerturb())) < 1e-8){
-						//by tPosition
-						return ((Triangle*)s)->getTPosition() < ((Triangle*)t)->getTPosition();
-					}
-					else{
-						return false;
-					}
-				}
-				else{
-					return false;
-				}
-			}
-		}
-		else{
-			return false;
-		}
-	}
-	else{
-		return false;
-	}
-}
 
 bool Simplex::simplexPointerCompare2(const Simplex *s, const Simplex *t){
 	//By function value
 	double f1 = s->funcValue, f2 = t->funcValue;
-	if (f1 < f2 - 1e-8){
+	if (f1 < f2 - EPS_compare){
 		return true;
-	}else if(f1 > f2 + 1e-8){
+	}else if(f1 > f2 + EPS_compare){
 		return false;
 	}
 	else{
@@ -1229,22 +1173,15 @@ bool Simplex::simplexPointerCompare2(const Simplex *s, const Simplex *t){
 				Edge* e2 = (Edge*)t;
 				tuple<Vertex*, Vertex*> e1v = e1->getVertices();
 				tuple<Vertex*, Vertex*> e2v = e2->getVertices();
-				float sp1 = e1->getSymPerturb();
-				float sp2 = e2->getSymPerturb();
-				if (sp1 < sp2 - 1e-8){
-					return true;
-				}else if (sp1 > sp2 + 1e-8){
-					return false;
-				}
-				else{
+				
 				//for(int i = 0; i < 2; ++i){
-					if (get<0>(e1v) != get<0>(e2v))
-						return simplexPointerCompare2(get<0>(e1v), get<0>(e2v));
-					if (get<1>(e1v) != get<1>(e2v))
-						return simplexPointerCompare2(get<1>(e1v), get<1>(e2v));
+				if (get<0>(e1v) != get<0>(e2v))
+					return simplexPointerCompare2(get<0>(e1v), get<0>(e2v));
+				if (get<1>(e1v) != get<1>(e2v))
+					return simplexPointerCompare2(get<1>(e1v), get<1>(e2v));
 				//}
 				cout << "Caught edge with same set of vertices\n";
-				return false;}
+				return false;
 			}
 			else{
 				//by first-order symbolic perturbation
@@ -1254,36 +1191,19 @@ bool Simplex::simplexPointerCompare2(const Simplex *s, const Simplex *t){
 				tuple<Vertex*, Vertex*, Vertex*> t1v = t1->getVertices();
 				tuple<Vertex*, Vertex*, Vertex*> t2v = t2->getVertices();
 				
-				tuple<float, float> Tri_sp1 = t1->getSymPerturb();
-				tuple<float, float> Tri_sp2 = t2->getSymPerturb();
-				if (get<0>(Tri_sp1) < get<0>(Tri_sp2) - 1e-8){
-					return true;
-				}else if(get<0>(Tri_sp1) > get<0>(Tri_sp2) + 1e-8){
-					return false;
-				}
-				else{
-					//by second-order symbolic perturbation
-					if (get<1>(Tri_sp1) < get<1>(Tri_sp2) - 1e-8){
-						return true;
-					}else if(get<1>(Tri_sp1) > get<1>(Tri_sp2) + 1e-8){
-						return false;
-					}
-					else{
-						//by tPosition
-						//for(int i = 0; i < 3; ++i){
-						if (get<0>(t1v) != get<0>(t2v))
-							return simplexPointerCompare2(get<0>(t1v), get<0>(t2v));
-						if (get<1>(t1v) != get<1>(t2v))
-							return simplexPointerCompare2(get<1>(t1v), get<1>(t2v));
-						if (get<2>(t1v) != get<2>(t2v))
-							return simplexPointerCompare2(get<2>(t1v), get<2>(t2v));
-						//}
-						cout << "Caught triangle with same set of vertices\n";
-						return false;
-					}
-				
-				
-				}
+
+				//by tPosition
+				//for(int i = 0; i < 3; ++i){
+				if (get<0>(t1v) != get<0>(t2v))
+					return simplexPointerCompare2(get<0>(t1v), get<0>(t2v));
+				if (get<1>(t1v) != get<1>(t2v))
+					return simplexPointerCompare2(get<1>(t1v), get<1>(t2v));
+				if (get<2>(t1v) != get<2>(t2v))
+					return simplexPointerCompare2(get<2>(t1v), get<2>(t2v));
+				//}
+				cout << "Caught triangle with same set of vertices\n";
+				return false;
+
 			}
 		}
 	}
