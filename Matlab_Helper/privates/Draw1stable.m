@@ -5,11 +5,14 @@
 %   dependency: DrawGraph.m
 
 
-function [vert, g] = Draw1stable(vertname, edgename, clr)
+function [vert, g] = Draw1stable(vertname, edgename, clr, linesize)
 %%  Set up parameters based on input
-    if (nargin == 2)
+    if (nargin < 3)
         % filename = 'test.fits_c50.up.NDskl.a.segs';
         clr = 'c';
+    end
+    if (nargin < 4)
+        linesize = 2;
     end
 %     
 %     fp = fopen(filename,'r');
@@ -27,16 +30,17 @@ function [vert, g] = Draw1stable(vertname, edgename, clr)
     vert = load(vertname);
     edge = load(edgename);
 %     sometimes need swap first two dimensions
-%     vert(:,[1,2]) = vert(:,[2,1]);
+    vert(:,[1,2]) = vert(:,[2,1]);
 
 
 %%  Create adjacency graph
     g = sparse(edge(:,1),edge(:,2), ones(length(edge),1), length(vert), length(vert));
-    DrawGraph(g, vert(:,1:3), clr, 2);
+    DrawGraph(g, vert(:,1:3), clr, linesize);
     
     
 %%  Mark critical edges red
-%     c_edge_idx = find(edge(:,3) == 1);
-%     edge = edge(c_edge_idx,:);
-%     g_critical = sparse(edge(:,1),edge(:,2), ones(size(edge,1),1), length(vert), length(vert));
-%     DrawGraph(g_critical, vert(:,1:3), 'r',2)
+    c_edge_idx = find(edge(:,3) == 1);
+    edge = edge(c_edge_idx,:);
+    
+    g_critical = sparse(edge(:,1),edge(:,2), ones(size(edge,1),1), length(vert), length(vert));
+    DrawGraph(g_critical, vert(:,1:3), 'm',2)

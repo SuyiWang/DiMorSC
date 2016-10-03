@@ -1,12 +1,11 @@
-#include "Simplicial2Complex.h"
-#include <list>
-#include <stack>
 #include <iostream>
 #include <algorithm>
-#include <ctime>
+#include <list>
+#include <stack>
+#include "Simplicial2Complex.h"
+
 
 #include <phat/compute_persistence_pairs.h>
-
 #include <phat/representations/vector_vector.h>
 #include <phat/representations/vector_heap.h>
 #include <phat/representations/vector_set.h>
@@ -29,17 +28,14 @@ using namespace std;
 typedef struct {
 	Vertex *min;
 	Edge *saddle;
-	float persistence;
-	float symPerturb;
-	float loc_diff;
+	double persistence;
+	int loc_diff;
 }persistencePair01;
 typedef struct {
 	Edge *saddle;
 	Triangle *max;
-	float persistence;
-	float symPerturb1;
-	float symPerturb2;
-	float loc_diff;
+	double persistence;
+	int loc_diff;
 }persistencePair12;
 
 class PersistencePairs{
@@ -51,43 +47,42 @@ class PersistencePairs{
 
 public:
 	vector<Simplex*> filtration;
+	
 	static bool persistencePairCompare01(const persistencePair01& p, const persistencePair01& q){
-		if(p.persistence < q.persistence){
+		if(p.persistence < q.persistence - EPS_compare){
 			return true;
 		}
-		else if (fabs(p.persistence - q.persistence) < 1e-8 && p.symPerturb < q.symPerturb){
-			return true;
-		}else if(fabs(p.persistence - q.persistence) < 1e-8 && fabs(p.symPerturb - q.symPerturb) < 1e-8 && p.loc_diff < q.loc_diff){
-			//cout<<"caught something"<<endl;
-			return true;
-		}else{
+		else if (p.persistence > q.persistence + EPS_compare){
 			return false;
+		}else{
+			if (p.loc_diff < q.loc_diff)
+				return true;
+			else if (p.loc_diff > q.loc_diff)
+				return false;
+			else {
+				return p.min->getVPosition() < q.min->getVPosition();
+			}
 		}
 	}
 	
 	
 	static bool persistencePairCompare12(const persistencePair12* p, const persistencePair12* q){
-		if(p->persistence < q->persistence - 1e-8){
+		if(p->persistence < q->persistence - EPS_compare){
 			return true;
-		}else if(p->persistence > q->persistence + 1e-8){
+		}
+		else if (p->persistence > q->persistence + EPS_compare){
 			return false;
 		}else{
-			if(p->symPerturb1 < q->symPerturb1 - 1e-8){
+			if (p->loc_diff < q->loc_diff)
 				return true;
-			}else if(p->symPerturb1 > q->symPerturb1 + 1e-8){
+			else if (p->loc_diff > q->loc_diff)
 				return false;
-			}else{
-				if (p->symPerturb2 < q->symPerturb2 - 1e-8){
-					return true;
-				}else if(p->symPerturb2 > q->symPerturb2 + 1e-8){
-					return false;
-				}else{
-					return p->loc_diff < q->loc_diff;
-				}
+			else {
+				return p->saddle->getEPosition() < q->saddle->getEPosition();
 			}
 		}
 	}
-	
+
 
 	PersistencePairs(Simplicial2Complex *K){
 		this->K = K;
@@ -95,8 +90,9 @@ public:
 		smPersistencePairs.clear();
 	}
 	void buildFiltration();
+	void buildFiltrationWithLowerStar();
+	vector<Simplex*> LowerStar(Vertex*);
 
-	void computePersistencePairsWithClear();
 	void PhatPersistence();
 
 	vector<Simplex*>* isCancellable(const persistencePair01&, ofstream&);
@@ -105,25 +101,30 @@ public:
 	cancelAlongPath have been made between then and this call*/
 	void cancelAlongVPath(vector<Simplex*>* VPath);
 
-	void cancelPersistencePairs(float delta);
+	void cancelPersistencePairs(double delta);
 
-	void outputPersistencePairs(string pathname){
+	void outputPersistencePairs(string pathname, int output_type){
 		ofstream outst(pathname, ios_base::trunc | ios_base::out);
 		for (int i = 0; i < this->msPersistencePairs.size(); i++){
-			outst << "Vertex Edge " << this->msPersistencePairs[i].persistence << " " << this->msPersistencePairs[i].symPerturb << "\n";
+			outst << "Vertex Edge " << this->msPersistencePairs[i].persistence << " " 
+				  << (msPersistencePairs[i].min)->getoriPosition() << " "
+				  << (msPersistencePairs[i].saddle)->getEPosition() << "\n";
 			//this->msPersistencePairs[i].min->output();
 			//this->msPersistencePairs[i].saddle->output();
 			//cout << "\n";
 		}
-		for (int i = 0; i < this->smPersistencePairs.size(); i++){
-			outst << "Edge Triangle " << this->smPersistencePairs[i]->persistence << " " << this->smPersistencePairs[i]->symPerturb1 << " " << this->smPersistencePairs[i]->symPerturb2 << "\n";
-			//this->smPersistencePairs[i].saddle->output();
-            //this->smPersistencePairs[i].max->output();
-			//cout <<"\n";
+		if (output_type==1){
+			for (int i = 0; i < this->smPersistencePairs.size(); i++){
+				outst << "Edge Triangle " << this->smPersistencePairs[i]->persistence << " "
+					  << (smPersistencePairs[i]->saddle)->getEPosition() << " "
+					  << (smPersistencePairs[i]->max)->getTPosition() << "\n";
+				//this->smPersistencePairs[i].saddle->output();
+				//this->smPersistencePairs[i].max->output();
+				//cout <<"\n";
+			}
 		}
 	}
 };
-
 
 void PersistencePairs::buildFiltration(){
 	K = this->K;
@@ -136,22 +137,133 @@ void PersistencePairs::buildFiltration(){
 
 	/*Sort the simplices according to their function value (including symbolic perturbations)*/
 	cout << "\t sorting " << filtration.size() <<" simplicies...\n";
-
-	
-	std::clock_t start;
-    double duration;
-    start = std::clock();
-    
 	sort(filtration.begin(), filtration.end(), Simplex::simplexPointerCompare2);
-	
-	duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-    std::cout<<"\t sorting time: "<< duration <<'\n';
-	
-	
 	for (unsigned int i = 0; i < this->filtration.size(); i++){
 		Simplex *s = filtration[i];
 		s->filtrationPosition = i;
 	}
+}
+
+/*
+vector<Simplex*> PersistencePairs::LowerStar(Vertex* v){
+	unordered_set<Simplex*> ls;
+	ls.clear();
+	vector<Edge*> edge_list;
+	edge_list.clear();
+	
+	// iterate all incident lower - edges
+	for (auto edge = v->begin(); edge != v->end(); ++edge){
+		tuple<Vertex*, Vertex*> verts = (*edge)->getVertices();
+		Vertex* e2 = get<0>(verts);
+		if (e2 == v) e2 = get<1>(verts);
+		
+		if (Simplex::simplexPointerCompare2(e2, v) && Simplex::simplexPointerCompare2(v, e2)){
+			cout<< "this sholdn't happen\n";
+		}
+		
+		if (Simplex::simplexPointerCompare2(e2, v)){
+			ls.insert(*edge);
+			edge_list.push_back(*edge);
+		}
+	}
+	sort(edge_list.begin(), edge_list.end(), Simplex::simplexPointerCompare2);
+	
+	
+	vector<Simplex*> rtn;
+	rtn.clear();
+	// fill in triangles
+	for (auto edge = edge_list.begin(); edge != edge_list.end(); ++edge){
+		tuple<Vertex*, Vertex*> verts = (*edge)->getVertices();
+		Vertex* e2 = get<0>(verts);
+		if (e2 == v) e2 = get<1>(verts);
+		rtn.push_back(*edge);
+		
+		for (auto tri = (*edge)->begin(); tri != (*edge)->end(); ++ tri){
+			Vertex* e3 = (*edge)->oppsiteVertex(*tri);
+			if (Simplex::simplexPointerCompare2(e2, e3) && Simplex::simplexPointerCompare2(v, e2)){
+				cout<< "this sholdn't happen\n";
+			}
+			if (Simplex::simplexPointerCompare2(e3, e2)){
+				rtn.push_back(*tri);
+			}
+		}
+	}
+	return rtn;
+}
+*/
+
+vector<Simplex*> PersistencePairs::LowerStar(Vertex* v){
+	unordered_set<Simplex*> ls;
+	ls.clear();
+	
+	// iterate all incident edges
+	for (auto edge = v->begin(); edge != v->end(); ++edge){
+		tuple<Vertex*, Vertex*> verts = (*edge)->getVertices();
+		Vertex* e2 = get<0>(verts);
+		if (e2 == v) e2 = get<1>(verts);
+		
+		if (Simplex::simplexPointerCompare2(e2, v) && Simplex::simplexPointerCompare2(v, e2)){
+			cout<< "this sholdn't happen\n";
+		}
+		
+		if (Simplex::simplexPointerCompare2(e2, v)){
+			ls.insert(*edge);
+			for (auto tri = (*edge)->begin(); tri != (*edge)->end(); ++ tri){
+				Vertex* e3 = (*edge)->oppsiteVertex(*tri);
+				if (Simplex::simplexPointerCompare2(e3, v)){
+					ls.insert(*tri);
+				}
+			}
+		}
+	}
+
+	vector<Simplex*> rtn;
+	rtn.clear();
+	for (auto s = ls.begin(); s != ls.end(); ++s){
+		rtn.push_back(*s);
+	}
+	sort(rtn.begin(), rtn.end(), Simplex::simplexPointerCompare2);
+	return rtn;
+}
+
+
+void PersistencePairs::buildFiltrationWithLowerStar(){
+	// K = this->K;
+	/*Reserve 3 times the vertices as there are in K. This is roughly how many simplices are usually in K, so filtration doesn't need to resize as often*/
+	filtration.reserve(K->order() * 3);
+	
+	/*
+	cout << "\t sorting vertices...";
+	K->sortVertices();
+	int counter = 0;
+	for (auto i = K->vBegin(); i < K->vEnd(); ++i){
+		(*i)->setVposition(counter);
+		counter++;
+	}
+	cout << "done\n";
+	*/
+	
+	cout << "\tInserting simplicies...";
+	unordered_set<Simplex*> dup_test;
+	dup_test.clear();
+	
+	int counter = 0;
+	for (auto i = K->vBegin(); i < K->vEnd(); ++i){
+		vector<Simplex*> lower_star = LowerStar((Vertex*) *i);
+		filtration.push_back(*i);
+		(*i) ->filtrationPosition = counter ++;
+		for (auto j = lower_star.begin(); j < lower_star.end(); ++j){
+			if (dup_test.count(*j) > 0){
+				cout << "caught duplicate simplex";
+				cout << (*j)->dim << "\n";
+			}else{
+				dup_test.insert(*j);
+			}
+			filtration.push_back(*j);
+			(*j) ->filtrationPosition = counter ++;
+		}
+	}
+	cout << "done\n";
 }
 
 
@@ -211,24 +323,10 @@ void PersistencePairs::PhatPersistence(){
 	
 	// call Phat
 	cout << "\tComputing persitence pairs...\n";
-	
-	std::clock_t start;
-    double duration;
-    start = std::clock();
-    
 	phat::persistence_pairs pairs;
 	phat::compute_persistence_pairs\
 		< phat::twist_reduction >( pairs, boundary_matrix );
-	
-	duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-    std::cout<<"\t Persistence pair computed in: "<< duration <<"sec\n";
-    start = std::clock();
-    
 	pairs.sort();
-	
-	duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-    std::cout<<"\t Persistence pair sorted in: "<< duration <<"sec\n";
-    
 	cout << "\tComputed and sorted!\n";
 	
 	// post processing: add sm-ms pairs, set critical points
@@ -239,33 +337,36 @@ void PersistencePairs::PhatPersistence(){
 		if (s1->dim == 0){
 			Vertex *v = (Vertex*)s1;
 			Edge *e = (Edge*)s2;
-			float persistence = e->funcValue - v->funcValue;
-			float symPerturb = e->getSymPerturb();
-			float loc_diff = e->filtrationPosition - v->filtrationPosition;
+			double persistence = e->funcValue - v->funcValue;
+			int loc_diff = e->filtrationPosition - v->filtrationPosition;
+			e->critical_type = 1;
+			e->persistence = persistence;
 
-			persistencePair01 pp = { v, e, persistence, symPerturb, loc_diff };
+			persistencePair01 pp = { v, e, persistence, loc_diff };
 			this->msPersistencePairs.push_back(pp);
+			K->addCriticalPoint((Simplex*) v);
+			K->addCriticalPoint((Simplex*) e);
 		}
 		else{
 			Edge* e = (Edge*)s1;
 			Triangle* t = (Triangle*)s2;
-			float persistence = t->funcValue - e->funcValue;
-			float symPerturb1 = get<0>(t->getSymPerturb())\
-							     - e->getSymPerturb();
-			float symPerturb2 = get<1>(t->getSymPerturb());
-			float loc_diff = t->filtrationPosition - e->filtrationPosition;
+			double persistence = t->funcValue - e->funcValue;
+			int loc_diff = t->filtrationPosition - e->filtrationPosition;
+			e->critical_type = 2;
+			e->persistence = persistence;
 
 			persistencePair12* pp = new persistencePair12;
 			pp->saddle = e;
 			pp->max = t;
 			pp->persistence = persistence;
-			pp->symPerturb1 = symPerturb1;
-			pp->symPerturb2 = symPerturb2;
 			pp->loc_diff = loc_diff;
 			this->smPersistencePairs.push_back(pp);
+			K->addCriticalPoint((Simplex*) e);
+			K->addCriticalPoint((Simplex*) t);
 		}
 	}
 	cout << "done!\n";
+	/*
 	for (vector<Vertex*>::iterator it = this->K->vBegin();\
 		 it != this->K->vEnd(); it++) {
 		K->addCriticalPoint((Simplex*)*it);
@@ -278,7 +379,7 @@ void PersistencePairs::PhatPersistence(){
 		 it != this->K->tEnd(); it++) {
 		K->addCriticalPoint((Simplex*)*it);
 	}
-	cout << "\tCritical points initialized\n";
+	cout << "\tCritical points initialized\n";*/
 }
 
 
@@ -289,11 +390,18 @@ vector<Simplex*>* PersistencePairs::isCancellable(const persistencePair01& pp, o
 
 	Edge *e = pp.saddle;
 	Vertex *v = pp.min;
+	
+	
+	if (DEBUG){
+		cancelData<< pp.persistence << " " << pp.loc_diff << " "
+		  		  << (pp.min)->getoriPosition() << " "
+		  		  << (pp.saddle)->getEPosition() << " ";
+	}
 
 	//if they have 0 persistence, we know they are cancellable and take this shortcut
-	if (fabs(e->funcValue - v->funcValue)<1e-8 && v->hasEdge(e)) {
+	if (fabs(e->funcValue - v->funcValue)<EPS_compare && v->hasEdge(e)) {
         if (DEBUG) {
-            cancelData << "Index: 01, Persistence: " << pp.persistence << " + " << pp.symPerturb << "e" << " Cancellable: Yes (trivial)" << endl;
+            cancelData << "Yes (trivial)" << endl;
 		}
 		return new vector<Simplex*>({ (Simplex*)e, (Simplex*)v });
 	}
@@ -374,7 +482,7 @@ vector<Simplex*>* PersistencePairs::isCancellable(const persistencePair01& pp, o
 	for (int i = 0;(unsigned) i < paths.size(); i++){
 		vector<Simplex*> *path = paths[i];
 		if (path->back() == (Simplex*)v && hasPath == true){
-			cancelData << "Index: 01, Persistence: " << pp.persistence << " + " << pp.symPerturb << "e" << ", Cancellable: No, Reason: path not unique\n";
+			cancelData << "No, Reason: path not unique\n";
 			return new vector<Simplex*>();
 		}
 		else if (path->back() == (Simplex*)v){
@@ -386,18 +494,18 @@ vector<Simplex*>* PersistencePairs::isCancellable(const persistencePair01& pp, o
 	Then uniquePath truly is unique. So we return it*/
 
 	if (hasPath == true){
-		cancelData << "Index: 01, Persistence: " << pp.persistence << " + " << pp.symPerturb << "e" << ", Cancellable: Yes\n";
+		cancelData << "Yes\n";
 		return uniquePath;
 	}
 	else{
 		/*Otherwise, there is no path from e to v*/
-		cancelData << "Index: 01, Persistence: " << pp.persistence << " + " << pp.symPerturb << "e" << ", Cancellable: No, Reason: no path found";
+		cancelData << "No, Reason: No path\n";
 		return new vector<Simplex*>();
 	}
 }
 
 //test cancellability
-
+/*
 vector<Simplex*>* PersistencePairs::isCancellable(const persistencePair12& pp, ofstream& cancelData){
 	DiscreteVField *V = this->K->getDiscreteVField();
 	Simplicial2Complex* K = this->K;
@@ -408,10 +516,18 @@ vector<Simplex*>* PersistencePairs::isCancellable(const persistencePair12& pp, o
 
 	Triangle *max = pp.max;
 	Edge* saddle = pp.saddle;
+	
+	
+	if (DEBUG){
+		cancelData << pp.persistence << " " << pp.loc_diff << " "
+				   << (pp.saddle)->getEPosition() << " "
+				   << (pp.max)->getTPosition() << " ";
+	}
+	
 
-	if (fabs(max->funcValue - saddle->funcValue) < 1e-8 && saddle->hasTriangle(max)) {
+	if (fabs(max->funcValue - saddle->funcValue) < EPS_compare && saddle->hasTriangle(max)) {
         if (DEBUG){
-			cancelData << "Index: 12, Persistence: "<< pp.persistence << " + " << pp.symPerturb1 << "e " << pp.symPerturb2 << " Cancellable: Yes (trivial)" << endl;
+			cancelData << "Yes (trivial)" << endl;
         }
 		
 		return new vector<Simplex*>({ (Simplex*)max,(Simplex*)saddle });
@@ -500,12 +616,12 @@ vector<Simplex*>* PersistencePairs::isCancellable(const persistencePair12& pp, o
 	path.clear();
     curr = (Simplex*)saddle;
     if (visited_twice.count(curr) > 0){
-        if (DEBUG) cancelData << "Index: 12, Persistence: " << pp.persistence << " + " << pp.symPerturb1 << "e" << ", Cancellable: No, Reason: path not unique1\n";
+        if (DEBUG) cancelData << "No, Reason: path not unique1\n";
         return new vector<Simplex*>();
     }else if (visited_once.count(curr) > 0){
         while (curr!=NULL){
             if (visited_twice.count(curr) > 0){
-                if (DEBUG) cancelData << "Index: 12, Persistence: " << pp.persistence << " + " << pp.symPerturb1 << "e" << ", Cancellable: No, Reason: path not unique2\n";
+                if (DEBUG) cancelData << "No, Reason: path not unique2\n";
                 return new vector<Simplex*>();
             }
             path.push_front(curr);
@@ -515,13 +631,13 @@ vector<Simplex*>* PersistencePairs::isCancellable(const persistencePair12& pp, o
 			uniquePath->push_back(path.front());
 			path.pop_front();
 		}
-		if (DEBUG) cancelData << "Index: 12, Persistence: " << pp.persistence << " + " << pp.symPerturb1 << "e" << ", Cancellable: Yes.\n";
+		if (DEBUG) cancelData << "Yes.\n";
         return uniquePath;
     }
-	if (DEBUG) cancelData << "Index: 12, Persistence: " << pp.persistence << " + " << pp.symPerturb1 << "e" << pp.symPerturb2 <<", Cancellable: No, Reason: No path.\n";
+	if (DEBUG) cancelData << "No, Reason: No path.\n";
     return new vector<Simplex*>();
 }
-
+*/
 //performs cancellation
 void PersistencePairs::cancelAlongVPath(vector<Simplex*>* VPath){
 	DiscreteVField *V = this->K->getDiscreteVField();
@@ -600,241 +716,64 @@ void PersistencePairs::cancelAlongVPath(vector<Simplex*>* VPath){
 
 
 //cancels al pairs that can be cancelled
-void PersistencePairs::cancelPersistencePairs(float delta){
-	std::clock_t start;
-    double duration;
-    start = std::clock();
-    
+void PersistencePairs::cancelPersistencePairs(double delta){
+
+
 	cout << "\tSorting "<< msPersistencePairs.size() << " ms-persistence pairs...\n";
 	cout.flush();
 	sort(msPersistencePairs.begin(), msPersistencePairs.end(), PersistencePairs::persistencePairCompare01);
-	duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-    std::cout<<"\t ms Pair re-sorted in: "<< duration <<"sec\n";
-    
-    start = std::clock();
-	
-	cout << "\tSorting "<< smPersistencePairs.size() << " sm-persistence pairs...\n";
-	cout.flush();
-	sort(smPersistencePairs.begin(), smPersistencePairs.end(), PersistencePairs::persistencePairCompare12);
-	
-	duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-    std::cout<<"\t sm Pair re-sorted in: "<< duration <<"sec\n";
-	
 	cout << "\tDone\n";
 	cout.flush();
 
-	if (DEBUG) this->outputPersistencePairs("persistencePairs.txt");
-
-	/*cout << "\tOutputting persistence pairs...\n";
-	ofstream persistencePairs("persistencePairs.txt", ios_base::trunc | ios_base::out);
-	int idx1 = 0, idx2 = 0;
-	while (idx1 < this->msPersistencePairs.size() && idx2 < this->smPersistencePairs.size()){
-		persistencePair01 pair1 = this->msPersistencePairs[idx1];
-		persistencePair12 pair2 = this->smPersistencePairs[idx2];
-
-		if (pair1.persistence <= pair2.persistence){
-			persistencePairs << "Vertex Edge " << pair1.persistence<< "\n";
-			idx1++;
-		}
-		else{
-			persistencePairs << "Edge Triangle " << pair2.persistence << "\n";
-			idx2++;
-		}
-	}
+	cout << "\tOutputting min-saddle persistence pairs...\n";
+	ofstream persistencePairs("PersistenceValues.txt", ios_base::trunc | ios_base::out);
+	int idx1 = 0;
 
 	if (idx1 < this->msPersistencePairs.size()){
 		while (idx1 < this->msPersistencePairs.size()){
 			persistencePair01 pair = this->msPersistencePairs[idx1];
-			persistencePairs << "Vertex Edge " << pair.persistence << "\n";
+			persistencePairs << pair.persistence << "\n";
 			idx1++;
-		}
-	}
-	else if (idx2 < this->smPersistencePairs.size()){
-		while (idx2 < this->smPersistencePairs.size()){
-			persistencePair12 pair = this->smPersistencePairs[idx2];
-			persistencePairs << "Edge Triagle " << pair.persistence << "\n";
-			idx2++;
-		}
-	}
-	cout << "\tDone\n";*/
-
-	/*cout << "\tCancelling min-saddle pairs...\n";
-	int i = 0;
-	while (i < this->msPersistencePairs.size()){
-		//cout << "Handling pair " << i << "\n";
-		persistencePair01 pair = msPersistencePairs[i];
-		if (pair.persistence <= delta){
-			vector<Simplex*>* VPath = this->isCancellable(pair);
-			if (!VPath->empty()){
-				this->cancelAlongVPath(VPath);
-				this->K->removeCriticalPoint(pair.min);
-				this->K->removeCriticalPoint(pair.saddle);
-			}
-			i++;
-		}
-		else{
-			break;
 		}
 	}
 	cout << "\tDone\n";
 
-	cout << "\tCancelling saddle-max pairs...\n";
-	int j = 0;
-	while (j < this->smPersistencePairs.size()){
-		persistencePair12 pair = this->smPersistencePairs[j];
-		if (pair.persistence <= delta){
-			vector<Simplex*>* VPath = this->isCancellable(pair);
-			if (!VPath->empty()){
-				this->cancelAlongVPath(VPath);
-				this->K->removeCriticalPoint(pair.saddle);
-				this->K->removeCriticalPoint(pair.max);
-			}
-			j++;
-		}
-		else{
-			break;
-		}
-	}
-	cout << "Done\n";*/
 
 	DiscreteVField *V = this->K->getDiscreteVField();
 
 
-	ofstream cancelData("cancellationData.txt", ios_base::trunc | ios_base::out);
+	ofstream cancelDataVE("cancelData_VE.txt", ios_base::trunc | ios_base::out);
+	// ofstream cancelDataET("cancelData_ET.txt", ios_base::trunc | ios_base::out);
 
 	cout << "\tCancelling...\n";
 	int i = 0, j = 0;
-	float average4 = 0, average5 = 0;
-	int a4Count = 0, a5Count = 0;
 	int count = 0;
-	//chrono::time_point<chrono::system_clock> start, end;
 	cout << "msPair:" << msPersistencePairs.size() << "\tsmPair" << smPersistencePairs.size() << endl;
-	int Pcounter = 0;
-	while (i < msPersistencePairs.size() && j < smPersistencePairs.size()){
+
+	while (i < msPersistencePairs.size()){
 		persistencePair01 pair1 = msPersistencePairs[i];
-		persistencePair12 pair2 = *(smPersistencePairs[j]);
 
-		if (pair1.persistence < pair2.persistence || (fabs(pair1.persistence - pair2.persistence) < 1e-8) && pair1.symPerturb < pair2.symPerturb1 + 1e-8){
-			if (pair1.persistence < delta + 1e-8){
-				//start = chrono::system_clock::now();
-				vector<Simplex*> *VPath = this->isCancellable(pair1, cancelData);
-
-				//end = chrono::system_clock::now();
-				//chrono::duration<float> eDur = end - start;
-				//float elapsedTime = eDur.count();
-				//average4 = (elapsedTime + a4Count * average4) / (a4Count + 1);
-				//a4Count++;
-				// if (DEBUG) cout<< pair1.persistence << endl;
-				if (!VPath->empty()){
-					count++;
-					this->cancelAlongVPath(VPath);
-					K->removeCriticalPoint(pair1.min);
-					K->removeCriticalPoint(pair1.saddle);
-				}
+		if (pair1.persistence < delta + EPS_compare){
+			vector<Simplex*> *VPath = this->isCancellable(pair1, cancelDataVE);
+			
+			// if (DEBUG) cout<< pair1.persistence << endl;
+			if (!VPath->empty()){
+				count++;
+				this->cancelAlongVPath(VPath);
+				K->removeCriticalPoint(pair1.min);
+				K->removeCriticalPoint(pair1.saddle);
 			}
-			i++;
 		}
-		else{
-			if (pair2.persistence < delta + 1e-8){
-				//start = chrono::system_clock::now();
-				vector<Simplex*> *VPath = this->isCancellable(pair2, cancelData);
-				/*end = chrono::system_clock::now();
-				chrono::duration<float> eDur = end - start;
-				float elapsedTime = eDur.count();
-				average4 = (elapsedTime + a4Count * average4) / (a4Count + 1);
-				a4Count++;*/
-				// if (DEBUG) cout<< pair2.persistence << endl;
-				if (!VPath->empty()){
-					count++;
-					this->cancelAlongVPath(VPath);
-					K->removeCriticalPoint(pair2.saddle);
-					K->removeCriticalPoint(pair2.max);
-				}
-			}
-			j++;
-		}
+		i++;
 
-
-		Pcounter++;
-		if (Pcounter%10000==0){
+		if (i%10000==0){
 			cout << "\r";
-			cout << "\t" << Pcounter << "/" << msPersistencePairs.size() + smPersistencePairs.size() << "...";
+			cout << "\t" << i << "/" << msPersistencePairs.size() + smPersistencePairs.size() << "...";
 			cout.flush();
 		}
 	}
-
-	cout << "msPair: " << i << "/" << msPersistencePairs.size() <<endl;
-	cout << "smPair: " << j << "/" << smPersistencePairs.size() <<endl;
-
-	if (i < msPersistencePairs.size()){
-		while (i < msPersistencePairs.size()){
-			persistencePair01 pair = msPersistencePairs[i];
-			if (pair.persistence <= delta){
-				//start = chrono::system_clock::now();
-				vector<Simplex*> *VPath = this->isCancellable(pair, cancelData);
-				/*end = chrono::system_clock::now();
-				chrono::duration<float> eDur = end - start;
-				float elapsedTime = eDur.count();
-				average4 = (elapsedTime + a4Count * average4) / (a4Count + 1);
-				a4Count++;*/
-				if (!VPath->empty()){
-					count++;
-					this->cancelAlongVPath(VPath);
-					K->removeCriticalPoint(pair.min);
-					K->removeCriticalPoint(pair.saddle);
-				}
-			}
-			i++;
-			if (i % 100 == 0){
-				cout << "\r";
-				cout << "\t" << i << "/" << msPersistencePairs.size() <<"...";
-				cout.flush();
-			}
-		}
-		cout<<endl;
-	}
-	else if (j < smPersistencePairs.size()){
-		while (j < smPersistencePairs.size()){
-			persistencePair12 pair = *(smPersistencePairs[j]);
-			if (pair.persistence <= delta){
-				//start = chrono::system_clock::now();
-				vector<Simplex*> *VPath = this->isCancellable(pair, cancelData);
-				/*end = chrono::system_clock::now();
-				chrono::duration<float> eDur = end - start;
-				float elapsedTime = eDur.count();
-				average4 = (elapsedTime + a4Count * average4) / (a4Count + 1);
-				a4Count++;*/
-				if (!VPath->empty()){
-					count++;
-					this->cancelAlongVPath(VPath);
-					K->removeCriticalPoint(pair.saddle);
-					K->removeCriticalPoint(pair.max);
-				}
-			}
-
-			j++;
-			if (j % 100 == 0){
-				cout << "\r";
-				cout << "\t" << j << "/" << smPersistencePairs.size();
-				cout.flush();
-			}
-		}
-		cout<<endl;
-	}
-	cout << "Cancelled Pair: " <<count<<endl;
-
-	/*for (vector<persistencePair01>::iterator it = this->msPersistencePairs.begin(); it != this->msPersistencePairs.end(); it++) {
-		persistencePair01 p = *it;
-		if (p.persistence <= delta) {
-			vector<Simplex*> *VPath = this->isCancellable(p, cancelData);
-			if (!VPath->empty()) {
-				this->cancelAlongVPath(VPath);
-				K->removeCriticalPoint(p.min);
-				K->removeCriticalPoint(p.saddle);
-			}
-		}
-	}*/
-
+	
+	cout << "msPair: " << count << "/" << msPersistencePairs.size() <<endl;
 	cout << "\tDone\n";
 	//cout << "average time to determine cancellability: " << average4 << "s\n";
 
@@ -843,26 +782,7 @@ void PersistencePairs::cancelPersistencePairs(float delta){
 	// V->outputVEmap();
 	// V->outputETmap();
 
-	/*Edge *topEdge = msPersistencePairs[msPersistencePairs.size() * 2 / 3].saddle;
-	set<Simplex*> *descMan = this->K->descendingManifold(topEdge);
-	ofstream vertexIndices("vertices.txt");
-	ofstream edgeIndices("MATLABedges.txt");
-	vertexIndices << "index\n";
-	edgeIndices << "index1 index2\n";
-	for (set<Simplex*>::iterator it = descMan->begin(); it != descMan->end(); it++) {
-		if ((*it)->dim == 0) {
-			Vertex *v = (Vertex*)*it;
-			vertexIndices << v->getVPosition() + 1 << "\n";
-		}
-		else if ((*it)->dim == 1) {
-			Edge *e = (Edge*)*it;
-			Vertex *v1 = get<0>(e->getVertices());
-			Vertex *v2 = get<1>(e->getVertices());
-			edgeIndices << v1->getVPosition() + 1 << " " << v2->getVPosition() + 1 << "\n";
-		}
-	}
-	vertexIndices.close();
-	edgeIndices.close();*/
+	
 	cout << "\tDone\n";
-	cancelData.close();
+	cancelDataVE.close();
 }

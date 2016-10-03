@@ -1,7 +1,7 @@
-function tt = Tree2SWCtt(Tree, vert, Handroot)
+function tt = Tree2SWCtt(Tree, vert, seg_weight, Handroot)
 
 [I J K] = find(Tree);
-if nargin == 2
+if nargin == 3
     [maxx, Handroot] = max(vert(:,4));
 end
 n = length(vert);
@@ -33,7 +33,8 @@ tt = ones(n,7)* (-1);
 tt(:,1) = 1:n;
 tt(:,2) = 2;
 tt(:, 3:5) = newvert(idx,1:3);
-tt(:,6) = 1;
+% seg_weight only affect the width of segments in vaa3d
+tt(:,6) = seg_weight;
 
 newpred = pred(idx);
 reverseidx(idx) = 1:n;
@@ -72,7 +73,7 @@ newTree = triu(newTree);
 %% Write tree to bin file
     fp = fopen('inputs/tree.bin','w');
     fwrite(fp, length(newvert), 'int32');
-    fwrite(fp, [newvert(:, 1:3) func]', 'double');
+    fwrite(fp, [newvert(:, 1:3) func]', 'float');
     fwrite(fp, length(I), 'int32');
     fwrite(fp, [I-1 J-1]', 'int32');
     fwrite(fp, 0, 'int32');

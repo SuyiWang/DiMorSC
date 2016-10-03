@@ -1,31 +1,24 @@
-%%  This file loads Olfactory data
+%%  This file loads Climbing Fibers
 %   Input:          path - default path
 %   Output:         tif file, fits file, txt file.
 %   Requirement:    create a folder named 'inputs' in current directory
 %   Dependency:     TriangulationNew.m
 %
 %   Other files:    mapinput.txt vert.txt edge.txt triangle.txt
-%   Some notes:
-%                   3 5 7 8 div2 does not work - Olfactory
 
 
 %%  Data sets - Change this if necessary
     addpath('privates');
-%   olfactory data
-    default_path = '/media/My Passport/NeuronData/DIADEM/Olfactory Projection Fibers/Image Stacks/OP_';
-%   Necrotical Layer data.
-%   default_path = '/media/My Passport/NeuronData/DIADEM/Neocortical Layer 1 Axons/Subset 1/Image Stacks/0';
-%   Neuromuscular data
-%   default_path = '/media/My Passport/NeuronData/DIADEM/Neuromuscular Projection Fibers/Image Stacks/0';
+%   Climbing Fibers
+    default_path = '/media/My Passport/NeuronData/DIADEM/Cerebellar Climbing Fibers/Image Stacks/CF_';
 
 
 %%  Loop over several data sets (if there is any)
-    for dataset = 1:9 % Olfactory data
+    for dataset = 1:3 % Olfactory data
 %       olfactory data
         path = [default_path int2str(dataset) '/'];
 
 
-        correspond = zeros(500,1);
         len = dir(path);
         counter = 0;
         thd = 0;
@@ -35,13 +28,11 @@
 %         for k = 1:length(len)-2
 %             disp(counter)
 %             cnt = sprintf('%d', k);
-%             correspond(k) = counter;
 %             try
 %                 data = imread([path cnt '.tif']);
 %             catch
 %                 fprintf('%d does not exist\n', k);
 %                 cnt = sprintf('%2.2d', k);
-%                 correspond(k) = counter;
 %                 try 
 %                     data = imread([path cnt '.tif']);
 %                 catch
@@ -72,9 +63,8 @@
 %           End of Show progress
             
             
-            cnt = sprintf('%d', k);
+            cnt = sprintf('%2.2d', k);
             % cnt = sprintf('%3.3d', k);
-            correspond(k) = counter;
 
             
 %%          try data with different format - 1. xxx_010.tif; 2. xxx10.tif
@@ -82,8 +72,7 @@
                 data = imread([path cnt '.tif']);
             catch
                 warning('%d does not exist\n', k);
-                cnt = sprintf('%2.2d', k);
-                correspond(k) = counter;
+                cnt = sprintf('%d', k);
                 try 
                     data = imread([path cnt '.tif']);
                 catch
@@ -111,10 +100,10 @@
 
 
 %%          truncate data, if necessary
-%             data = data(150:200, 300:350);
-%             data = flip(data, 1);
+            data = sum(data/3, 3);
+%             data = flip(data, 1);     % this is used to align output with input.
 %%          preview density image
-%             image(uint8(data));
+            image(uint8(data/10));
         
 
 %%          write data to 'imgdata' and .tif file.
@@ -123,7 +112,7 @@
             if counter==1
                 imgdata = zeros([size(data) length(len)-2]);  
                 imgdata(:,:, counter) = data;
-                imwrite(data,['Olfactory_OP' int2str(dataset) '.tif'])
+                imwrite(data,['CF_' int2str(dataset) '.tif'])
 
 
 %%              diamorse input generation
@@ -135,7 +124,7 @@
 
             else
                 imgdata(:,:, counter) = data;
-                imwrite(data,['Olfactory_OP' int2str(dataset) '.tif'],'WriteMode','append');
+                imwrite(data,['CF_' int2str(dataset) '.tif'],'WriteMode','append');
 
 
 %%              diamorse input generation
@@ -151,7 +140,7 @@
         
 %%      Smooth data (if necessary - esp for DisPerSE)
 %         imgdata(:,:,:) = smooth3(imgdata,'gaussian',[3 3 3]);
-%         imgdata(imgdata < 1) = 0;
+%         imgdata(imgdata < 10) = 0;
         
         
 %%      Write fits file for DisPerSE
@@ -160,12 +149,12 @@
         
 %%      Create simplicial complex
         clear data; clear writedata;
-        
+
         PreTriangulation(imgdata);
         clear imgdata;
 
 %         Triangulate(['inputs/Olfactory_OP_' int2str(dataset)], 0);
-        Triangulate(['inputs/Olfactory_OP_' int2str(dataset)], 1);
+        Triangulate(['inputs/CF_' int2str(dataset)], 0);
         disp('***************DONE********************');
     end
 

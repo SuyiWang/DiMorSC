@@ -9,6 +9,7 @@ Comments: Vertex index start from 1. All edges and triangles uses vertex index.
 */
 
 #include<stdio.h>
+#include<iostream>
 #include<fstream>
 #include<vector>
 #include<string>
@@ -20,7 +21,7 @@ using namespace std;
 
 // Do not fill inner part of a cube - 12
 // Do     fill inner part of a cube - 16
-const int nb = 12;
+const int nb = 16;
 
 struct point{
     double x,y,z,v;
@@ -509,7 +510,10 @@ int triangulation_with_vertex(){
     for(int v = 0; v < original_total; ++v){
 		int i, j, k, val;
 		i = vertex[v].x; j = vertex[v].y; k = vertex[v].z; val = vertex[v].v;
-		if (val < THD) continue;
+		if (val < THD) {
+			cout << "skipped something\n";
+			continue;
+		}
 		if ((i+j+k)%2==1){
 			triangle_cube(i, j, k, 0, th, eh);
 		}

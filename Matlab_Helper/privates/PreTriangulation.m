@@ -16,17 +16,23 @@
 function vert = PreTriangulation(density_map)
 %%  Truncate data using a threshold
     fprintf('Smoothing data...\n');
-    THD = -1e-6;
-    thd_map = smooth3(density_map(:,:,:),'gaussian',[7 7 5]); 
-    index = find(thd_map > THD);
+    selTHD = 1;
+    thd_map = smooth3(density_map(:,:,:),'gaussian',[7 7 5], 0.98);
+        clrTHD = -1e-6;
+        clrIndex = find(thd_map < clrTHD);
+        thd_map(clrIndex) = 1e-6;
+    index = find(thd_map > selTHD);
+    density_map = thd_map;
     clear thd_map;
-
-    real_density_map = smooth3(density_map(:,:,:),'gaussian',[7 7 5]);
-    density_map = zeros(size(real_density_map));
-    density_map(index) = max(real_density_map(index), 1e-6);
-    clear real_density_map;
-
     
+
+%     % This blocked is used for first selecting a bigger area, then uses narrower filter.    
+%     real_density_map = smooth3(density_map(:,:,:),'gaussian',[7 7 5]);
+%     density_map = zeros(size(real_density_map));
+%     density_map(index) = max(real_density_map(index), 1e-6);
+%     clear real_density_map;
+    
+
 %%  Write sparse vertex location file for triangulation
     fprintf('Preparing input...\n');
     len = length(index);

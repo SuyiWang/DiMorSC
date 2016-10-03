@@ -10,9 +10,9 @@
 %%  Read file info from input folder
 addpath('privates');
 addpath('matlab_bgl');
-% path = '/media/My Passport/NeuronData/OSU_AllenAAVs/100141454/';
+path = '/media/My Passport/NeuronData/OSU_AllenAAVs/100141454/';
 % path = '/media/My Passport/NeuronData/OSU_AllenAAVs/100141563/';
-path = '/media/My Passport/NeuronData/OSU_AllenAAVs/100141780/';
+% path = '/media/My Passport/NeuronData/OSU_AllenAAVs/100141780/';
 dirpath = dir(path);
 fnames = {dirpath.name};
 
@@ -20,9 +20,9 @@ fnames = {dirpath.name};
 %%  Loop over files
 counter = 0;
 first = 1;
-% start = 191; len = 330 - 191;
+start = 191; len = 330 - 191;
 % start = 614; len = 753 - 614;
-start = 311; len = 449 - 311;
+% start = 311; len = 449 - 311;
 for k = start:(start+len)
 %%  Show progress
     lPrompt = 1; % use this for a licensed version
@@ -42,9 +42,9 @@ for k = start:(start+len)
     cnt = sprintf('%3.3d', k);
     try
 %%      Search for particular type of input file
-%         pattern = ['102139' cnt '-projection.png'];
+        pattern = ['102139' cnt '-projection.png'];
 %         pattern = ['102141' cnt '-projection.png'];
-        pattern = ['102152' cnt '-projection.png'];
+%         pattern = ['102152' cnt '-projection.png'];
         fileindex = regexp(fnames,pattern);
         if sum(~cellfun('isempty',fileindex))>1
             warning('More than one records found');
@@ -66,6 +66,8 @@ for k = start:(start+len)
 %         image(writedata);
 %     subplot(2, 1, 2)
 %         image(data(:,:,1));
+%%  Flip data, if necessary. This used to align our output with the input.
+    writedata = flip(writedata, 1);
     
         
 %%  Append data    
@@ -80,5 +82,8 @@ for k = start:(start+len)
     end
 end
 
-TriangulationNew(imgdata, 'inputs/Allen');
+
+PreTriangulation(imgdata);
 clear imgdata;
+Triangulate(['inputs/Allen' int2str(dataset)], 0);
+disp('***************DONE********************');

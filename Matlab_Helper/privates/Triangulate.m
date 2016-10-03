@@ -1,9 +1,11 @@
 function [] = Triangulate( filename, fill )
 %%  Triangulate - 1) do not fill the cube; 2) fill the cube interier with a tetrahedron
-    fprintf('Trianguating...\n');
+    fprintf('Trianguating...');
     if fill
+        disp('with filled interior');
         system('./test_fill');
     else
+        disp('with unfilled interior');
         system('./test');
     end
 
@@ -23,7 +25,12 @@ function [] = Triangulate( filename, fill )
     
     fprintf('Processing Edges...\n');
     len = length(vert);    
-    tmpgraph = sparse(edge(:,1),edge(:,2),ones(length(edge),1), len, len);
+    if size(edge,1) ~= 0
+        tmpgraph = sparse(edge(:,1),edge(:,2),ones(length(edge),1), len, len);
+    else
+        warning('no edges, skipped');
+        return;
+    end
     tmpgraph = tmpgraph + tmpgraph';
     [I J K] = find(triu(tmpgraph));
     edge = [I J];

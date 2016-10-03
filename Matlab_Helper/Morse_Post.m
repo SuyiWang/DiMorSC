@@ -14,8 +14,10 @@ addpath('matlab_bgl');
 %%  Read in graph file
 disp('reading graph file');
 figure;
-% [vert, G] = Draw1stable('inputs/outvert_1000.txt','inputs/outedge_1000.txt');
-[vert, G] = Draw1stable('inputs/treevert.txt','inputs/treeedge.txt');
+dir_path = '~/Develop/density/Results/AllenInstitute/1/'
+[vert, G] = Draw1stable([dir_path 'outvert.txt'],[dir_path 'outedge.txt']);
+% [vert, G] = Draw1stable('inputs/tree_vert.txt','inputs/tree_edge.txt');
+% [vert, G] = Draw1stable('inputs/testvert_full_2.txt','inputs/testedge_full_2.txt');
 DrawGraph(G, vert, 'r', 2);
 
 
@@ -24,6 +26,7 @@ disp('transforming graph to original space');
 trans = [0 0];
 scale = [1 1];
 vert = transformvert(vert, trans, scale);
+% vert(:,2) = 50 - vert(:,2);
 
 
 %%  clean with branch - collapse degree 2 edges
@@ -63,6 +66,7 @@ DrawGraph(Gadd, vert, 'k', 2);
 
 %% Generate files for vaa3D
 disp('writing swc file');
-tt = Tree2SWCtt(G+Gadd, vert);
-% save_v3d_swc_file(tt, 'Allen.swc')
-save_v3d_swc_file(tt, 'inputs/Partha.swc')
+tt = Tree2SWCtt(G+Gadd, vert, 2);
+save_v3d_swc_file(tt, 'inputs/Allen.swc')
+% save_v3d_swc_file(tt, 'inputs/OP_7_tree.swc')
+% Draw_Tree_progress();

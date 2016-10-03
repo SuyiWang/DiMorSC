@@ -59,6 +59,9 @@ for k = start:(start+len)
         continue;
     end
     
+%%  Flip data, if necessary. This used to align our output with the input.
+    data = flip(data, 1);
+    
     
 %%  All 3-dimension has same data, we pick one of them, truncate if necessary  
     writedata = uint8(data(:,:,1)/256) * 10;

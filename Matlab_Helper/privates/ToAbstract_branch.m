@@ -4,6 +4,9 @@ graph = G+G';
 graph = graph - diag(diag(graph));
 degcount = zeros(length(G), 1);
 for i = 1:length(G)
+    if mod(i,1000) == 0
+        disp(i)
+    end
     nbvert = find(graph(i,:));
     degcount(i) = length(nbvert);
 end
