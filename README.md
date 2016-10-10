@@ -42,6 +42,9 @@ example:
 
 # Test files
 Test files are provided for checking if the software is successfully setup. 
+https://drive.google.com/open?id=0B_mktdY-pu10MHRlaUZneUhJMEE
+
+If the output on your machine is the same as the ones given in the output folder, congratulations, the setup is complete and you are good to go! (Test data good in Ubuntu only)
 
 
 # Post processing
