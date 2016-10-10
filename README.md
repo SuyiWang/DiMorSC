@@ -30,9 +30,9 @@ g++ Triangulation.cpp -std=c++11 -o triangulate
 
 # Running densityRips
 
-## <format>
-./density3D <inputfile> <output_file_vertex> <output_file_edge> <persistence_threshold>
-## <example>
+## format
+./density3D [inputfile] [output_file_vertex] [output_file_edge] [persistence_threshold]
+## example
 ./density3D Allen.bin output_vert.txt output_edge.txt 20
 
 # Test files
