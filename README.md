@@ -1,20 +1,20 @@
 # 2D-3D_1-stable_manifold
 This is a software that extract 1-stable manifold from arbitrary simplicial complex. The input is a simplicial complex with function value defined on vertices. The output is a graph that represents the 1-stable manifold.
 
-# Folder Content
+# Folder Content Highlights
 
 ## Main Folder
 
-1. densityRips.cpp           (main: Compute 1-stable manifold. input: BIN file; output: vert.txt edge.txt)
-2. Simplicial2Complex.h      (contains classes of simplicial complex and discrete vector field)
-3. persistence.h             (persistence class)
-4. Makecommand               (sample command for building densityRips)
-5. gridComplex.txt           (sample input for 2D case)
+1. densityRips.cpp - Main program. Computes 1-stable manifold from function defined on simplicial complex. input: BIN file; output: vert.txt edge.txt. There is only 1 parameter (persistence threshold) to adjust.
+
+2. Makecommand - sample command for building densityRips.
 
 ## Matlab Helper (list only the most frequently used ones)
-1. Draw1stable.m (Helper that draws the vert.txt and edge.txt file)
-2. MorsePost.m (Postprocessing steps)
-3. LoadAllen.m (Load particular data file and generate BIN file for densityRips)
+1. LoadAllen.m/LoadPartha.m - Load particular data file and generate BIN file for densityRips. There is one adjustable parameter - cut off density threshold. In LoadAllen.m it is at line 93. In Load Partha, it is at Line 92. The threshold removes a data point when its density is lower than the threshold, therefore reduce the size of simplicial complex.
+
+2. MorsePost.m - This file converts the output of densityRips, which is usually a graph, to a tree using maximum spanning tree. It also smoothes the branch a little and removes low persistence branches. Then write tree data to .swc file. There is one adjustable parameter - branch persistence threshold.
+
+3. Draw1stable.m - This file visualizes the output of densityRips, without any post processing.
 
 # Prerequisites
 1. main code DensityRips depends on PHAT to compute persistence pairs. PHAT is available on github here (https://github.com/blazs/phat) - put PHAT file in the project root folder.
