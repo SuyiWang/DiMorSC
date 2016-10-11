@@ -1,16 +1,16 @@
 function [] = Triangulate( filename, fill )
-%%  Triangulate - 1) do not fill the cube; 2) fill the cube interier with a tetrahedron
+    %%  Triangulate - 0) do not fill the cube; 1) fill the cube interier with a tetrahedron
     fprintf('Trianguating...');
     if fill
         disp('with filled interior');
-        system('./test_fill');
+        system('./triangulate 1');
     else
         disp('with unfilled interior');
-        system('./test');
+        system('./triangulate 0');
     end
 
     
-%%  Load output
+    %%  Load output
     fprintf('Reading Vertices...\n');
     fp = fopen('vert.bin','r');
     vert = fread(fp, [4 inf], 'double')';
@@ -42,17 +42,17 @@ function [] = Triangulate( filename, fill )
     fclose(fp);
     
     
-    fprintf('Reading Tetrahedrons...\n');
-    fp = fopen('tetrahedron.bin','r');
-    tet = fread(fp, [4 inf], 'int32')';
-    fclose(fp);
+    % fprintf('Reading Tetrahedrons...\n');
+    % fp = fopen('tetrahedron.bin','r');
+    % tet = fread(fp, [4 inf], 'int32')';
+    % fclose(fp);
     
     
-%%  Write input file for discrete morse
-%   edges and triangles are originally using vertex index starting from 1.
+    %%  Write input file for discrete morse
+    %   edges and triangles are originally using vertex index starting from 1.
     fprintf('Writing simplices...\n');
     write_output(filename,vert, edge-1, triangles-1);
-%     write_tetra([filename 'tet_'], vert, tet - 1);
+    % write_tetra([filename 'tet_'], vert, tet - 1);
     fprintf('All done!\n');
 end
 

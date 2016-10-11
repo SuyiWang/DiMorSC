@@ -6,67 +6,92 @@
 %   Downloads: 
 %       matlab_bgl: https://www.mathworks.com/matlabcentral/fileexchange/10922-matlabbgl
 %       vaa3d_matlab_io: the folder is in vaa3d source code.
-addpath('vaa3d_matlab_io');
-addpath('privates');
-addpath('matlab_bgl');
 
 
-%%  Read in graph file
-disp('reading graph file');
-figure;
-dir_path = '~/Develop/density/Results/AllenInstitute/1/'
-[vert, G] = Draw1stable([dir_path 'outvert.txt'],[dir_path 'outedge.txt']);
-% [vert, G] = Draw1stable('inputs/tree_vert.txt','inputs/tree_edge.txt');
-% [vert, G] = Draw1stable('inputs/testvert_full_2.txt','inputs/testedge_full_2.txt');
-DrawGraph(G, vert, 'r', 2);
+function Morse_Post(is_tree, dir_path, output_filename)
+    addpath('vaa3d_matlab_io');
+    addpath('privates');
+    addpath('matlab_bgl');
 
 
-%%  adjust position and scale if necessary
-disp('transforming graph to original space');
-trans = [0 0];
-scale = [1 1];
-vert = transformvert(vert, trans, scale);
-% vert(:,2) = 50 - vert(:,2);
+    %%  Read in graph file
+    if nargin == 0
+        dir_path = '~/Develop/density/Results/AllenInstitute/1/';
+        output_filename = 'Allen.swc';
+        is_tree = 0;
+        % dir_path = '~/Develop/density/Results/Partha/PMD1232/';
+    end
+    
+    disp('reading graph file');
+    figure;
+    if is_tree == 1
+        dir_path = '';
+        if nargin < 3
+            output_filename = 'simplified_tree.swc';
+        end
+        [vert, G] = Draw1stable([dir_path 'tree_vert.txt'],[dir_path 'tree_edge.txt']);
+        final_tree = G;
+    else
+        %   ***Attention*** you might need change file name here.
+        [vert, G] = Draw1stable([dir_path 'outvert.txt'],[dir_path 'outedge.txt']);
+        %%  adjust position and scale if necessary
+        disp('transforming graph to original space');
+        trans = [0 0];
+        scale = [1 1];
+        vert = transformvert(vert, trans, scale);
+        % vert(:,2) = 50 - vert(:,2);
 
 
-%%  clean with branch - collapse degree 2 edges
-disp('converting to abstract graph');
-[absG, edgeG, edgeList, abs_idx] = ToAbstract_branch(G, 0, vert);
-disp('computing maximum spanning tree');
-absT = maxspanningtree(absG);
-% hold on;
-% plot3(vert(abs_idx,1),vert(abs_idx,2),vert(abs_idx,3),'b*');
-% DrawGraph(absT, vert(abs_idx,:),'k',2);
-% hold off;
+        %%  clean with branch - collapse degree 2 edges
+        disp('converting to abstract graph');
+        [absG, edgeG, edgeList, abs_idx] = ToAbstract_branch(G, 0, vert);
+        disp('computing maximum spanning tree');
+        absT = maxspanningtree(absG);
+        % hold on;
+        % plot3(vert(abs_idx,1),vert(abs_idx,2),vert(abs_idx,3),'b*');
+        % DrawGraph(absT, vert(abs_idx,:),'k',2);
+        % hold off;
 
 
-%%  expand degree 2 edges and select the biggest connected component
-disp('converting back to actual graph');
-G = ToActual(absT, edgeG, edgeList, vert, 0, abs_idx);
-disp('Selecting the biggest connected component');
-G = SimpComponent(G, vert);
+        %%  smooth each branch
+        edgeList = s_branch(edgeList, vert, false);
+        % edgeList = resample_edge(edgeList);
 
 
-%%  Make up edges
-disp('making up edges');
-restG = logical(absG>1e-6)  - logical(absT>1e-6);
-Gadd = makeup(restG, edgeG, edgeList, vert, 0, abs_idx);
-% idx = find(b{9}==2 | b{9} ==3);
-% hold on;
-% plot3(vert(idx,1),vert(idx,2),vert(idx,3),'r.');
-% hold off;
-% G = saddleclean(G, vert, idx, 1);
+        %%  expand degree 2 edges and select the biggest connected component
+        disp('converting back to actual graph');
+        G = ToActual(absT, edgeG, edgeList, vert, 0, abs_idx);
+        disp('Selecting the biggest connected component');
+        G = SimpComponent(G, vert);
 
 
-%% Plot results
-disp('Plotting result');
-DrawGraph(G+Gadd, vert, 'b', 2);
-DrawGraph(Gadd, vert, 'k', 2);
+        %%  Make up edges
+        %   see makeup.m for details
+        disp('making up edges');
+        restG = logical(absG>1e-6)  - logical(absT>1e-6);
+        Gadd = makeup(restG, edgeG, edgeList, vert, 0, abs_idx);
+        % idx = find(b{9}==2 | b{9} ==3);
+        % hold on;
+        % plot3(vert(idx,1),vert(idx,2),vert(idx,3),'r.');
+        % hold off;
+        % G = saddleclean(G, vert, idx, 1);
 
 
-%% Generate files for vaa3D
-disp('writing swc file');
-tt = Tree2SWCtt(G+Gadd, vert, 2);
-save_v3d_swc_file(tt, 'inputs/Allen.swc')
-% save_v3d_swc_file(tt, 'inputs/OP_7_tree.swc')
-% Draw_Tree_progress();
+        %%  Plot results
+        disp('Plotting result');
+        DrawGraph(G+Gadd, vert, 'b', 1);
+        DrawGraph(Gadd, vert, 'k', 1);
+        final_tree = G + Gadd;
+    end
+
+    %%  Generate files for vaa3D
+    disp('writing swc file');
+    tt = Tree2SWCtt(final_tree, vert, 2);
+    save_v3d_swc_file(tt, ['inputs/' output_filename])
+    
+    
+    %%  Simplify low persistence branches;
+    if ~is_tree
+        persistence_simplification(10, 0);
+        Morse_Post(1, '', output_filename);
+    end

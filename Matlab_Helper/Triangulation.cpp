@@ -21,7 +21,7 @@ using namespace std;
 
 // Do not fill inner part of a cube - 12
 // Do     fill inner part of a cube - 16
-const int nb = 16;
+int nb = 12;
 
 struct point{
     double x,y,z,v;
@@ -224,7 +224,7 @@ int triangle_cube(int i, int j, int k, int AB, TriangleHash &th, EdgeHash &eh){
                           {0,0,0}, {1,1,0}, {0,1,1}
                    };
 		int flag = 1;
-        for (int cnt = 0; cnt<nb; cnt++){
+        for (int cnt = 0; cnt < nb; cnt++){
             if ((i + TypeAtri[cnt*3][0]>=HEIGHT)||
                 (i + TypeAtri[cnt*3+1][0]>=HEIGHT)||
                 (i + TypeAtri[cnt*3+2][0]>=HEIGHT)||
@@ -526,8 +526,18 @@ int triangulation_with_vertex(){
 }
 
 
-int main()
+int main(int argc, char* argv[])
 {
+	if (argc == 2){
+		int fillnot = atoi(argv[1]);
+		if (!fillnot) nb = 12;
+			else nb = 16;
+	}
+	else {
+		cout << "usage: triangulation [fill]\n";
+		return 0;
+	}
+	
     string filename = "mapinput.txt";
 
     printf("Initializing input\n");

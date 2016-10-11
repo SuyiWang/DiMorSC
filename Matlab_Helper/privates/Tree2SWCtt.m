@@ -20,6 +20,7 @@ newTree = Tree(realpoint,realpoint);
 newvert = vert(realpoint,1:4);
 newvert(:, 4) = newvert(:, 4)/maxx;
 
+
 newTree = newTree + newTree';
 [~, dt ,~, pred] = dfs(newTree, newroot);
 
@@ -64,7 +65,7 @@ for i = 2:length(idx)
     if (ancestor==-1) 
         continue;
     end
-    func(curr) = func(ancestor) + newvert(curr, 4) * sqrt(sum((newvert(curr,:) - newvert(ancestor,:)).*(newvert(curr,:) - newvert(ancestor,:))));
+    func(curr) = func(ancestor) + newvert(curr, 4) * sqrt(sum((newvert(curr,1:3) - newvert(ancestor,1:3)).*(newvert(curr,1:3) - newvert(ancestor,1:3))));
 end
 % figure;
 % scatter3(newvert(:,1), newvert(:,2), newvert(:,3), 3, func, 'filled');
@@ -73,7 +74,7 @@ newTree = triu(newTree);
 %% Write tree to bin file
     fp = fopen('inputs/tree.bin','w');
     fwrite(fp, length(newvert), 'int32');
-    fwrite(fp, [newvert(:, 1:3) func]', 'float');
+    fwrite(fp, [newvert(:, 1:3) func]', 'double');
     fwrite(fp, length(I), 'int32');
     fwrite(fp, [I-1 J-1]', 'int32');
     fwrite(fp, 0, 'int32');

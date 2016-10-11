@@ -7,9 +7,8 @@ function output = swc2graph(filename, clr, DrawFlip, HEIGHT)
         DrawFlip = 0;
         clr = 'r';
         HEIGHT = 512;
-    elseif nargin == 1
+    elseif nargin <= 2
         DrawFlip = 0;
-        clr = 'r';
         HEIGHT = 512;
     end
     
@@ -34,7 +33,7 @@ function output = swc2graph(filename, clr, DrawFlip, HEIGHT)
     edge = [I J];
 
     
-    hold on;
-    patch('faces', edge, 'vertices', vert, 'edgecolor', clr, 'LineWidth', 2);
-    plot3(vert(1,1),vert(1,2),vert(1,3),'r*','markersize',5);
-    hold off;
+%     hold on;
+    patch('faces', edge, 'vertices', vert, 'edgecolor', clr, 'LineWidth', 1);
+%     plot3(vert(1,1),vert(1,2),vert(1,3),'r*','markersize',5);
+%     hold off;

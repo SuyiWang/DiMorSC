@@ -5,14 +5,20 @@
 %   dependency: DrawGraph.m
 
 
-function [vert, g] = Draw1stable(vertname, edgename, clr, linesize)
+function [vert, g] = Draw1stable(vertname, edgename, clr, linesize, flip)
 %%  Set up parameters based on input
     if (nargin < 3)
         % filename = 'test.fits_c50.up.NDskl.a.segs';
         clr = 'c';
+        linesize = 2;
+        flip = true;
     end
     if (nargin < 4)
         linesize = 2;
+        flip = true;
+    end
+    if (nargin < 5)
+        flip = true;
     end
 %     
 %     fp = fopen(filename,'r');
@@ -30,7 +36,9 @@ function [vert, g] = Draw1stable(vertname, edgename, clr, linesize)
     vert = load(vertname);
     edge = load(edgename);
 %     sometimes need swap first two dimensions
-    vert(:,[1,2]) = vert(:,[2,1]);
+    if flip
+        vert(:,[1,2]) = vert(:,[2,1]);
+    end
 
 
 %%  Create adjacency graph

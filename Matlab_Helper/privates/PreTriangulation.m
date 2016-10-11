@@ -16,7 +16,7 @@
 function vert = PreTriangulation(density_map)
 %%  Truncate data using a threshold
     fprintf('Smoothing data...\n');
-    selTHD = 1;
+    selTHD = 10;
     thd_map = smooth3(density_map(:,:,:),'gaussian',[7 7 5], 0.98);
         clrTHD = -1e-6;
         clrIndex = find(thd_map < clrTHD);
