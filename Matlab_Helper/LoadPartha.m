@@ -89,7 +89,7 @@ for k = start:(start+len)
 end
 clear data; clear writedata;
 
-PreTriangulation(imgdata);
+PreTriangulation(imgdata, 10);
 clear imgdata;
 
 Triangulate('inputs/Partha', 0);

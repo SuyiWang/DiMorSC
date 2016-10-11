@@ -90,7 +90,7 @@ for k = start:(start+len)
 end
 
 
-PreTriangulation(imgdata);
+PreTriangulation(imgdata, 10);
 clear imgdata;
 Triangulate(['inputs/Allen'], 0);
 disp('***************DONE********************');

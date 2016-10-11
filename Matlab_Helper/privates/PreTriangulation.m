@@ -13,10 +13,12 @@
 %   Other files:    mapinput.txt vert.txt edge.txt triangle.txt
 
 
-function vert = PreTriangulation(density_map)
+function vert = PreTriangulation(density_map, selTHD)
 %%  Truncate data using a threshold
     fprintf('Smoothing data...\n');
-    selTHD = 10;
+	if nargin == 1
+		selTHD = 10;
+	end
     thd_map = smooth3(density_map(:,:,:),'gaussian',[7 7 5], 0.98);
         clrTHD = -1e-6;
         clrIndex = find(thd_map < clrTHD);
