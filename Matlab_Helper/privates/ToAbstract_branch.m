@@ -1,4 +1,9 @@
-function [absG, edgeG, edgelist, abs_idx] = ToAbstract_branch(G, verbose, vert)
+function [absG, edgeG, edgelist, abs_idx] = ToAbstract_branch(G, verbose, vert, opt)
+
+if nargin == 3
+    opt = 0;
+end
+
 fvalue = vert(:,4);
 graph = G+G';
 graph = graph - diag(diag(graph));
@@ -95,8 +100,14 @@ for i = 1:length(abs_idx)
 
         edgeG(s, t) = edgecount;
         edgeG(t, s) = edgecount;
-        absG(s, t) = max(min(fvalue(edgelist{edgecount})), 1e-7);
-        absG(t, s) = max(min(fvalue(edgelist{edgecount})), 1e-7);
+        if opt == 0 
+            absG(s, t) = max(min(fvalue(edgelist{edgecount})), 1e-7);
+            absG(t, s) = absG(s, t);
+        else
+            absG(s, t) = avg_weight(fvalue(edgelist{edgecount}), ...
+                                    vert(edgelist{edgecount}, 1:3));
+            absG(t, s) = absG(s, t);
+        end
         if absG(s,t) <1e-6
             warning('caught edge with 0 weight');
         end

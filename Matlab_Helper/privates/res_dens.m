@@ -1,9 +1,8 @@
-dir_path = 'inputs/';
-hFig = figure(1);
-clf;
+function res_dens(hFig, dir_path, filename)
+% dir_path = '~/Develop/density/Results/Partha/';
 set(hFig, 'Position', [100 100 1200 800])
 
-fp = fopen([dir_path 'Allen_1.bin'],'r');
+fp = fopen([dir_path filename],'r');
 m = fread(fp, 1, 'int32');
 vertex = fread(fp, [4 m], 'double');
 n = fread(fp, 1, 'int32');
@@ -12,16 +11,17 @@ k = fread(fp, 1, 'int32');
 tris = fread(fp, [3 k], 'int32');
 fclose(fp);
 
-rand_idx = floor(rand(length(vertex), 1)*20);
+rand_idx = floor(rand(length(vertex), 1) * 1);
 vertex = vertex (:, rand_idx==0);
 
-idx = find(vertex(4,:) > 20);
+idx = find(vertex(4,:) > 30);
 vertex([1,2], :) = vertex([2,1], :);
 vertex = vertex (:, idx);
 
-
-
-fscatter3(vertex(1,:),vertex(2,:), vertex(3,:), vertex(4,:))
+cmap = colormap('gray');
+cmap = flipud(cmap);
+hold on;
+fscatter3(vertex(1,:),vertex(2,:), vertex(3,:), log(vertex(4,:)+1), cmap);
 axis normal;
 % scatter3(vertex(1,:),vertex(2,:), vertex(3,:), 2, vertex(4,:),'filled')
 

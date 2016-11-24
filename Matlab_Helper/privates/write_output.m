@@ -32,6 +32,7 @@ function write_output(filename, vertex, edges, triangles)
 %     fprintf(fp, '%d %d\n', edges');
 %     fprintf(fp, '%d\n', k);
 %     fprintf(fp, '%d %d %d\n', triangles');
+    
     fwrite(fp, m, 'int32');
     fwrite(fp, vertex', 'double');
     fwrite(fp, n, 'int32');

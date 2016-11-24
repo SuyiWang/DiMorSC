@@ -1,4 +1,4 @@
-function G = ToActual(absT, edgeG, edgelist, vert, verbose, abs_idx)
+function [G, actualvert] = ToActual(absT, edgeG, edgelist, vert, verbose, abs_idx)
 MAXEDGE = sum(cellfun(@length, edgelist));
 I = zeros(MAXEDGE, 1);
 J = I;
@@ -25,5 +25,10 @@ end
 
 I = I(1:top-1);
 J = J(1:top-1);
+actualvert = zeros(length(vert), 1);
+actualvert(I) = 1;actualvert(J) = 1;
+existed = find(actualvert > 0);
+actualvert(existed) = 1:length(existed);
+
 val = ones(length(I), 1);
 G = sparse(I, J, val, length(vert), length(vert));

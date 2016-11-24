@@ -4,7 +4,7 @@
 %   will be add back to the maximum spanning tree.
 
 function G = makeup(restG, edgeG, edgelist, vert, verbose, abs_idx)
-percentage = 0.2;
+percentage = 0.5;
 MAXEDGE = sum(cellfun(@length, edgelist));
 I = zeros(MAXEDGE, 1);
 J = I;

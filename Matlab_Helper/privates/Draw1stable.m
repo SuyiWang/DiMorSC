@@ -50,5 +50,5 @@ function [vert, g] = Draw1stable(vertname, edgename, clr, linesize, flip)
     c_edge_idx = find(edge(:,3) == 1);
     edge = edge(c_edge_idx,:);
     
-    g_critical = sparse(edge(:,1),edge(:,2), ones(size(edge,1),1), length(vert), length(vert));
-    DrawGraph(g_critical, vert(:,1:3), 'm',2)
+%     g_critical = sparse(edge(:,1),edge(:,2), ones(size(edge,1),1), length(vert), length(vert));
+%     DrawGraph(g_critical, vert(:,1:3), 'm',2)

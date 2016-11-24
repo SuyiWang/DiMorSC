@@ -3,6 +3,8 @@ function tt = Tree2SWCtt(Tree, vert, seg_weight, Handroot)
 [I J K] = find(Tree);
 if nargin == 3
     [maxx, Handroot] = max(vert(:,4));
+elseif nargin ==4
+    maxx = max(vert(:,4));
 end
 n = length(vert);
 

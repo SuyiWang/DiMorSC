@@ -34,7 +34,7 @@ function [] = Triangulate( filename, fill )
     tmpgraph = tmpgraph + tmpgraph';
     [I J K] = find(triu(tmpgraph));
     edge = [I J];
-    
+    clear I; clear J; clear K;clear tmpgraph;
     
     fprintf('Reading Triangles...\n');
     fp = fopen('triangle.bin','r');

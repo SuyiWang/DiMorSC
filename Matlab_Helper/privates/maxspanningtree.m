@@ -1,7 +1,10 @@
 function [ T ] = maxspanningtree( G )
     % computes maximum spanning tree for top 5 components in size
-    G = -G;
+    % The function value is flipped in MorseCode, so still compute minimum
+    % spanning tree. Indeed, it's maximum spanning tree w.r.t. original
+    % input.
     n = length(G);
+    
 %     addpath(genpath('matlab_bgl'));
 %     
 %     [ci, sizes] = components(G);
@@ -20,7 +23,8 @@ function [ T ] = maxspanningtree( G )
 %     end
 %     G = sparse(I, J, V, n, n)+sparse(J, I, V, n, n);
     G = G + G';
-    [I J V] = mst(G);
-    T = sparse(I, J, -V, n, n)+sparse(J, I, -V, n, n);
+    [I, J, V] = mst(G);
+    mmm = max(V);
+    T = sparse(I, J, mmm + 1 -V, n, n)+sparse(J, I, mmm + 1 -V, n, n);
 end
 
