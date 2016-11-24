@@ -8,16 +8,27 @@ Output: vert.txt edge.txt triangle.txt
 Comments: Vertex index start from 1. All edges and triangles uses vertex index.
 */
 
+
+// g++ Triangulation_new_hash.cpp -std=c++11 -I /home/wangsu/Develop/Neuro/DiademMetric/persistence/boost_1_59_0/ -o triangulate_new
+
+
 #include<stdio.h>
 #include<iostream>
 #include<fstream>
 #include<vector>
 #include<string>
 #include<algorithm>
-#include<unordered_map>
-#include<unordered_set>
+// #include<unordered_map>
+// #include<unordered_set>
+
+#include <boost/tuple/tuple.hpp>
+#include <boost/tuple/tuple_comparison.hpp>
+#include <boost/unordered_set.hpp>
+
 using namespace std;
+
 #define DEBUG 0
+#define complexhash 0
 
 // Do not fill inner part of a cube - 12
 // Do     fill inner part of a cube - 16
@@ -61,91 +72,151 @@ vector<tp> triangle;
 
 int vertcount = 1;
 vector<vector<vector<int> > > rev_idx;
+vector<vector<vector<bool> > > marked;
 
 // vector<vector<vector<double> > > MAP;
 // Density map stored in 3D array
 int HEIGHT, WIDTH, DEPTH, LENGTH;
-	
-class EdgeHash{
-	// Assume vertex are given in ascending order
-	private:
-		unordered_map<int, unordered_set<int>* >* v1;
-		
-	public:
-		EdgeHash(){
-			v1 = new unordered_map<int, unordered_set<int>* >();
-			v1->clear();
-		}
-		bool HasEdge(cp edge){
-			if(v1->count(edge.p1)==0){
-				return false;
-			}else{
-				unordered_set<int>* v2 = v1->at(edge.p1);
-				if (v2->count(edge.p2) == 0){
-					return false;
-				}else{
-					return true;
-				}
-			}
-		}
-		void InsertEdge(cp edge){
-			if (v1->count(edge.p1) > 0){
-				unordered_set<int>* v2 = v1->at(edge.p1);
-				v2->insert(edge.p2);
-			}else{
-				unordered_set<int>* v2 = new unordered_set<int>();
-				v2->insert(edge.p2);
-				std::pair<int, unordered_set<int>*> pair = std::make_pair(edge.p1, v2);
-				v1->insert(pair);
-			}
-		}
-};
 
-class TriangleHash{
-	// Assume vertex are given in ascending order
-	private:
-		unordered_map<int, EdgeHash* >* v1;
+
+
+#if complexhash
+	class EdgeHash{
+		// Assume vertex are given in ascending order
+		private:
+			unordered_map<int, unordered_set<int>* >* v1;
 		
-	public:
-		TriangleHash(){
-			v1 = new unordered_map<int, EdgeHash*>();
-			v1->clear();
-		}
-		bool HasTriangle(tp triangle){
-			if(v1->count(triangle.p1)==0){
-				return false;
-			}else{
-				EdgeHash* v2 = v1->at(triangle.p1);
-				cp edge;
-				edge.p1 = triangle.p2;
-				edge.p2 = triangle.p3;
-				if (v2->HasEdge(edge)){
-					return true;
-				}else{
+		public:
+			EdgeHash(){
+				v1 = new unordered_map<int, unordered_set<int>* >();
+				v1->clear();
+			}
+			bool HasEdge(cp edge){
+				if(v1->count(edge.p1)==0){
 					return false;
+				}else{
+					unordered_set<int>* v2 = v1->at(edge.p1);
+					if (v2->count(edge.p2) == 0){
+						return false;
+					}else{
+						return true;
+					}
 				}
 			}
-		}
-		void InsertTriangle(tp triangle){
-			if (v1->count(triangle.p1) > 0){
-				EdgeHash* v2 = v1->at(triangle.p1);
-				cp edge;
-				edge.p1 = triangle.p2;
-				edge.p2 = triangle.p3;
+			void InsertEdge(cp edge){
+				if (v1->count(edge.p1) > 0){
+					unordered_set<int>* v2 = v1->at(edge.p1);
+					v2->insert(edge.p2);
+				}else{
+					unordered_set<int>* v2 = new unordered_set<int>();
+					v2->insert(edge.p2);
+					std::pair<int, unordered_set<int>*> pair = std::make_pair(edge.p1, v2);
+					v1->insert(pair);
+				}
+			}
+	};
+
+	class TriangleHash{
+		// Assume vertex are given in ascending order
+		private:
+			unordered_map<int, EdgeHash* >* v1;
+		
+		public:
+			TriangleHash(){
+				v1 = new unordered_map<int, EdgeHash*>();
+				v1->clear();
+			}
+			bool HasTriangle(tp triangle){
+				if(v1->count(triangle.p1)==0){
+					return false;
+				}else{
+					EdgeHash* v2 = v1->at(triangle.p1);
+					cp edge;
+					edge.p1 = triangle.p2;
+					edge.p2 = triangle.p3;
+					if (v2->HasEdge(edge)){
+						return true;
+					}else{
+						return false;
+					}
+				}
+			}
+			void InsertTriangle(tp triangle){
+				if (v1->count(triangle.p1) > 0){
+					EdgeHash* v2 = v1->at(triangle.p1);
+					cp edge;
+					edge.p1 = triangle.p2;
+					edge.p2 = triangle.p3;
 				
-				v2->InsertEdge(edge);
-			}else{
-				EdgeHash* v2 = new EdgeHash();
-				cp edge;
-				edge.p1 = triangle.p2;
-				edge.p2 = triangle.p3;
-				v2->InsertEdge(edge);
-				std::pair<int, EdgeHash*> pair = std::make_pair(triangle.p1, v2);
-				v1->insert(pair);
+					v2->InsertEdge(edge);
+				}else{
+					EdgeHash* v2 = new EdgeHash();
+					cp edge;
+					edge.p1 = triangle.p2;
+					edge.p2 = triangle.p3;
+					v2->InsertEdge(edge);
+					std::pair<int, EdgeHash*> pair = std::make_pair(triangle.p1, v2);
+					v1->insert(pair);
+				}
 			}
-		}
-};
+	};
+#else
+	std::size_t hash_value(const cp &e){
+	  std::size_t seed = 0;
+	  boost::hash_combine(seed, e.p1);
+	  boost::hash_combine(seed, e.p2);
+	  return seed;
+	}
+	bool operator==(const cp &a, const cp &b)
+	{
+	  return a.p1 == b.p1 && a.p2 == b.p2;
+	}
+	
+	class EdgeHash{
+		// Assume vertex are given in ascending order
+		private:
+			boost::unordered_set<cp> e_hash;
+		
+		public:
+			EdgeHash(){
+				e_hash.clear();
+			}
+			bool HasEdge(cp edge){
+				return e_hash.count(edge) > 0;
+			}
+			void InsertEdge(cp edge){
+				e_hash.insert(edge);
+			}
+	};
+	
+	std::size_t hash_value(const tp &t){
+	  std::size_t seed = 0;
+	  boost::hash_combine(seed, t.p1);
+	  boost::hash_combine(seed, t.p2);
+	  boost::hash_combine(seed, t.p3);
+	  return seed;
+	}
+	bool operator==(const tp &a, const tp &b)
+	{
+	  return a.p1 == b.p1 && a.p2 == b.p2 && a.p3 == b.p3;
+	}
 
+	class TriangleHash{
+		// Assume vertex are given in ascending order
+		private:
+			boost::unordered_set<tp> t_hash;
+		public:
+			TriangleHash(){
+				t_hash.clear();
+			}
+			bool HasTriangle(tp triangle){
+				return t_hash.count(triangle) > 0;
+			}
+			void InsertTriangle(tp triangle){
+				t_hash.insert(triangle);
+			}
+	};
+#endif
 
 void bin_init(string filename){
 	vertex.clear(); edge.clear(); triangle.clear(); 
@@ -168,14 +239,18 @@ void bin_init(string filename){
 
     printf("Preparing rev-index matrix %d-%d-%d\n", HEIGHT, WIDTH, DEPTH);
 	
-    rev_idx.clear();	
+    rev_idx.clear();
+    marked.clear();	
     for (int i = 0; i < HEIGHT; ++i) {
         // DIM 2
         vector<vector<int> > tmp2di;
+        vector<vector<bool> > tmp2db;
         rev_idx.push_back(tmp2di);
+        marked.push_back(tmp2db);
         for (int j = 0; j < WIDTH; ++j){
             // DIM 3
             rev_idx[i].push_back(vector<int>(DEPTH, 0));
+            marked[i].push_back(vector<bool>(DEPTH, 0));
         }
     }
 
@@ -509,18 +584,54 @@ int triangulation_with_vertex(){
 //    int counter = 0;
     for(int v = 0; v < original_total; ++v){
 		int i, j, k, val;
+		if (v%10000==0){
+			cout << '\r';
+			cout << v << '/' << original_total;
+			cout.flush();
+		}
+		
 		i = vertex[v].x; j = vertex[v].y; k = vertex[v].z; val = vertex[v].v;
 		if (val < THD) {
 			cout << "skipped something\n";
 			continue;
 		}
+		marked[i][j][k] = 1;
 		if ((i+j+k)%2==1){
 			triangle_cube(i, j, k, 0, th, eh);
 		}
 		else{
 			triangle_cube(i, j, k, 1, th, eh);
 		}
-    }
+	}/*
+	for(int v = 0; v < original_total; ++v){
+		int i, j, k, val;
+		if (v%10000==0){
+			cout << '\r';
+			cout << v << '/' << original_total;
+			cout.flush();
+		}
+		
+		i = vertex[v].x; j = vertex[v].y; k = vertex[v].z; val = vertex[v].v;
+		if (val < THD) {
+			cout << "skipped something\n";
+			continue;
+		}
+		for(int x = -5; x < 5; ++x)
+			for(int y = -5; y < 5; ++y)
+				for(int z = -3; z < 3; ++z)
+				{
+					if (i+x < 0 || i+x >= HEIGHT || j+y < 0 || j+y >= WIDTH
+						|| k+z < 0 || k+z >= DEPTH) continue;
+					if (marked[i+x][j+y][k+z]) continue;
+					marked[i+x][j+y][k+z] = 1;
+					if ((i+x+j+y+k+z)%2==1){
+						triangle_cube(i+x, j+y, k+z, 0, th, eh);
+					}
+					else{
+						triangle_cube(i+x, j+y, k+z, 1, th, eh);
+					}
+				}
+    }*/
     printf("Done\n");
     return 0;
 }

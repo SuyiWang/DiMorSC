@@ -6,17 +6,22 @@
 %
 %   Other files:    mapinput.txt vert.txt edge.txt triangle.txt
 
-
-%%  Data sets - Change this if necessary
+function trans = LoadNeocortical(folder, selTHD)
+    if folder == 1
+        DataNum = 6;
+    elseif folder == 2
+        DataNum = 10;
+    end
+    
+    
+    %%  Data sets - Change this if necessary
     addpath('privates');
-%   Necrotical Layer data.
-    default_path = '/media/My Passport/NeuronData/DIADEM/Neocortical Layer 1 Axons/Subset 1/Image Stacks/0';
-%     default_path = 'H:\NeuronData\DIADEM\Neocortical Layer 1 Axons\Subset 1\Image Stacks\0';
+    %   Necrotical Layer data.
+    default_path = ['/media/My Passport/NeuronData/DIADEM/Neocortical Layer 1 Axons/Subset ' int2str(folder) '/Image Stacks/0'];
 
     
-%%  Read Translation information
-    fp = fopen('supple_data/Neocortical_subset_1','r');
-    DataNum = 6;
+    %%  Read Translation information
+    fp = fopen(['supple_data/Neocortical_subset_' int2str(folder)],'r');
     trans_info = zeros(DataNum, 3);
     for dataset = 1:DataNum
         linescan = fgetl(fp);
@@ -32,50 +37,46 @@
     trans_info(:,3) = trans_info(:,3) - global_trans(3);
 
     
-%%  Loop over several data sets (if there is any)
-%   The data set contains 6 parts, they should be merged later.
+    %%  Loop over several data sets (if there is any)
+    %   The data set contains 6 parts, they should be merged later.
     for dataset = 1:DataNum % Necrotical
 
 
-%       Necrotical Layer data.
+        %   Necrotical Layer data.
         path = [default_path int2str(dataset) '/'];
         len = dir(path);
         counter = 0;
-        thd = 0;
         x = trans_info(dataset, 1);
         y = trans_info(dataset, 2);
         z = trans_info(dataset, 3);
 
 
-%%      Loop over all files of one dataset
+        %%  Loop over all files of one dataset
         for k = 1:length(len)-2
-%%          Show progress
+            %%  Show progress
             lPrompt = 1; % use this for a licensed version
             %lPrompt = 7; %use this for a trial version
             dispstr = sprintf('Progress = %d / %d', k, length(len)-2);
             if (k == 1)
                 disp(dispstr);
             else
-%               char(8) is the ascii character for "backspace"
-%               dispay the require number of them
+            %   char(8) is the ascii character for "backspace"
+            %   dispay the require number of them
                 disp([char(8)*ones(1,lStr+lPrompt), dispstr]);        
             end
             lStr = length(dispstr);
-%           End of Show progress
+            %   End of Show progress
             
             
             cnt = sprintf('%d', k);
-            % cnt = sprintf('%3.3d', k);
-            correspond(k) = counter;
 
             
-%%          try data with different format - 1. xxx010.tif; 2. xxx10.tif
+            %%  try data with different format - 1. xxx010.tif; 2. xxx10.tif
             try
                 data = imread([path cnt '.tif']);
             catch
                 warning('%d does not exist\n', k);
                 cnt = sprintf('%2.2d', k);
-                correspond(k) = counter;
                 try 
                     data = imread([path cnt '.tif']);
                 catch
@@ -85,20 +86,22 @@
             end
             
             
-%%          Threshold data
-            data(data < 35) = 0;
-%             image(uint8(data));
+            %%  Threshold data
+            % data(data < 35) = 0;
+            % image(uint8(data));
             
-%%           On first file, create imgdata to hold the output.
+            
+            %%  On first file, create imgdata to hold the output.
             counter = counter + 1;
             if (dataset == 1 && counter==1)
-%               Note 1: subset 1 -> 60; subset 2 -> 85, check the z-value
-%               BELOW!
-%               Note 2: The data need fliped to be aligned
-%               Note 3: in Matlab Vertical is the 1-st dimension. so x-y
-%                       needs flipping
+                % Note 1: subset 1 -> 60; subset 2 -> 85, check the z-value
+                % BELOW!
+                % Note 2: The data need fliped to be aligned
+                % Note 3: in Matlab Vertical is the 1-st dimension. so x-y
+                % needs flipping
                 imgdata = zeros([size(data)+max(trans_info(1:DataNum, 1:2)) ...
-                                 60 + max(trans_info(1:DataNum,3))]);  
+                                 max(trans_info(1:DataNum,3))]);
+                trans = max(trans_info(1:DataNum, 1:3));
                 imgdata(x + 1:x + size(data, 1),...
                         y + 1:y + size(data, 2),...
                         z + counter) = data';
@@ -109,20 +112,26 @@
             end
         end
     end
-%%  Write tif data
+    
+    
+    %%  Write tif data
     disp('Writing tif data...');
     for i = 1:size(imgdata,3)
-%         image(uint16(imgdata(:,:,i)));
+        %   image(uint16(imgdata(:,:,i)));
         if (i==1)
-            imwrite(imgdata(:,:,i),['inputs/Neocortical.tif']);
+            imwrite(imgdata(:,:,i),['inputs/Neocortical_' int2str(folder) '.tif']);
         else
-            imwrite(imgdata(:,:,i),['inputs/Neocortical.tif'],'WriteMode','append');
+            imwrite(imgdata(:,:,i),['inputs/Neocortical_' int2str(folder) '.tif'],'WriteMode','append');
         end
     end
-%%  Create simplicial complex
-%   The function crashes in windows because there are too many triangles
+    %%  Create simplicial complex
+    %   The function crashes in windows because there are too many triangles
     disp('Creating triangluation...');
-    TriangulationNew(imgdata, 'inputs/Neocortical');
+    clear data; clear writedata;
+    PreTriangulation(imgdata, selTHD);
+    clear imgdata;
+    
+    Triangulate(['inputs/Neocortical_' int2str(folder)], 1);
     disp('***************DONE********************');
 
 
