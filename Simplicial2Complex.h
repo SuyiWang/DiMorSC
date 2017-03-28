@@ -368,6 +368,7 @@ void Simplicial2Complex::outputArcs(string vertexFile, string edgeFile){
 	}
 	output_info.close();
 	cout << "Written " << counter << "arcs\n";
+	
 	vector<Vertex*> vertices;
 	vector<Edge*>edges;
 	for(set<Simplex*>::iterator it = manifolds.begin(); it != manifolds.end(); it++){
@@ -551,6 +552,7 @@ void Simplicial2Complex::buildComplexFromFile2_BIN(string pathname) {
 		// this will be over written by sorted order later
 		v->setVposition(vPosition);
 		v->setoriposition(vPosition);
+		addCriticalPoint((Simplex*) v);
 	}
 	
 	
@@ -560,9 +562,10 @@ void Simplicial2Complex::buildComplexFromFile2_BIN(string pathname) {
 	
 	
 	cout << "\tSorting " << numOfVertices << "vertices" << endl;
-
+	
 	vector<Vertex*> sortedvert(vertexList);
 	sort(sortedvert.begin(), sortedvert.end(), Simplex::simplexPointerCompare2);
+		
 	int counter = 0;
 	for (auto i = sortedvert.begin(); i < sortedvert.end(); ++i){
 		(*i)->setVposition(counter);
@@ -589,6 +592,8 @@ void Simplicial2Complex::buildComplexFromFile2_BIN(string pathname) {
 		v2->addEdge(e);
 		int ePosition = this->addEdge(e);
 		e->setEposition(ePosition);
+		e->critical_type = 0;
+		addCriticalPoint((Simplex*) e);
 	}
 	cout << "\tDone." << endl;
 
@@ -616,6 +621,7 @@ void Simplicial2Complex::buildComplexFromFile2_BIN(string pathname) {
 		e3->addTriangle(t);
 		int tPosition = this->addTriangle(t);
 		t->setTposition(tPosition);
+		addCriticalPoint((Simplex*) t);
 	}
 	vertexList = sortedvert;
 	delete int_buffer;
@@ -681,6 +687,7 @@ set<Simplex*>* Simplicial2Complex::descendingManifold(Simplex* s){
 		st->push((Simplex*)v2);
 		manifold->insert((Simplex*)v1);
 		manifold->insert((Simplex*)v2);
+		// bool o_manifold = false;
 		while (!st->empty()){
 			Simplex* simplex = st->top();
 			st->pop();
@@ -713,9 +720,34 @@ set<Simplex*>* Simplicial2Complex::descendingManifold(Simplex* s){
 				}
 				manifold->insert((Simplex*)exitVert);
 				st->push((Simplex*)exitVert);
+				/*
+				if (DEBUG && edge->getEPosition() == 114798){
+					o_manifold = true;
+				}
+				*/
 			}
 
 		}
+		
+		
+		// Write test path
+		/*
+		if(DEBUG && o_manifold){
+			cout << "found marked edge!\n";
+			ofstream opath("Marked_Path.txt", std::ofstream::out | std::ofstream::app);
+			for(set<Simplex*>::iterator it = manifold->begin(); it != manifold->end(); it++){
+				if ((*it)->dim == 0){
+					opath << "0 " <<((Vertex*)(*it))->getoriPosition() << endl;
+				}else if ((*it)->dim == 1){
+					opath << "1 " <<((Edge*)(*it))->getEPosition() << endl;
+				}
+			}
+			opath << endl;
+			opath.close();
+		}
+		*/
+		
+		
 		delete st;
 	}
 	else{

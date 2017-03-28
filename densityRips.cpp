@@ -39,6 +39,7 @@ int main(int argc, char* argv[]){
 		 << sizeof(Triangle) << endl;
 	cout << sizeof(Simplex*) << " " << sizeof(Vertex*) << " " << sizeof(Edge*) << " "
 		 << sizeof(Triangle*) << endl;
+	if (DEBUG) cout << "debug mode\n";
 
 	// 2D defined by edge. 3D defined by vertex.
 	// Change this if necessary [FromFile: Triangle defined by edge][FromFile2: by vertex]
@@ -48,7 +49,7 @@ int main(int argc, char* argv[]){
 	if (DIM == 3)
 		K.buildComplexFromFile2_BIN(argv[1]);
 	else
-		K.buildComplexFromFile(argv[1]);
+		K.buildComplexFromFile2_BIN(argv[1]);
 	// K.outputComplex("testcomplex0.txt");
 	cout << "Done\n";
 	cout.flush();
@@ -91,8 +92,10 @@ int main(int argc, char* argv[]){
 	P.PhatPersistence();
 	if (DEBUG){
 		cout << "Outputing persistence pairs...\n";
+		// will output sorted vert to 'svert.txt'
 		P.outputPersistencePairs("persistencePairs.txt", DEBUG);
 		cout << "Done\n";
+		
 	}
 	cout << "Done!\n";
 	cout.flush();

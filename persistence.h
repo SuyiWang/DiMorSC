@@ -106,7 +106,8 @@ public:
 	void outputPersistencePairs(string pathname, int output_type){
 		ofstream outst(pathname, ios_base::trunc | ios_base::out);
 		for (int i = 0; i < this->msPersistencePairs.size(); i++){
-			outst << "Vertex Edge " << this->msPersistencePairs[i].persistence << " " 
+			// 1 - VE pair
+			outst << "1 " << this->msPersistencePairs[i].persistence << " " 
 				  << (msPersistencePairs[i].min)->getoriPosition() << " "
 				  << (msPersistencePairs[i].saddle)->getEPosition() << "\n";
 			//this->msPersistencePairs[i].min->output();
@@ -114,8 +115,9 @@ public:
 			//cout << "\n";
 		}
 		if (output_type==1){
+			// 2 - ET pair
 			for (int i = 0; i < this->smPersistencePairs.size(); i++){
-				outst << "Edge Triangle " << this->smPersistencePairs[i]->persistence << " "
+				outst << "2 " << this->smPersistencePairs[i]->persistence << " "
 					  << (smPersistencePairs[i]->saddle)->getEPosition() << " "
 					  << (smPersistencePairs[i]->max)->getTPosition() << "\n";
 				//this->smPersistencePairs[i].saddle->output();
@@ -344,8 +346,8 @@ void PersistencePairs::PhatPersistence(){
 
 			persistencePair01 pp = { v, e, persistence, loc_diff };
 			this->msPersistencePairs.push_back(pp);
-			K->addCriticalPoint((Simplex*) v);
-			K->addCriticalPoint((Simplex*) e);
+			// K->addCriticalPoint((Simplex*) v);
+			// K->addCriticalPoint((Simplex*) e);
 		}
 		else{
 			Edge* e = (Edge*)s1;
@@ -361,8 +363,8 @@ void PersistencePairs::PhatPersistence(){
 			pp->persistence = persistence;
 			pp->loc_diff = loc_diff;
 			this->smPersistencePairs.push_back(pp);
-			K->addCriticalPoint((Simplex*) e);
-			K->addCriticalPoint((Simplex*) t);
+			// K->addCriticalPoint((Simplex*) e);
+			// K->addCriticalPoint((Simplex*) t);
 		}
 	}
 	cout << "done!\n";
