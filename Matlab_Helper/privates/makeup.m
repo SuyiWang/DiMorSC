@@ -60,4 +60,4 @@ end
 I = I(1:top-1);
 J = J(1:top-1);
 val = ones(length(I), 1);
-G = sparse(I, J, val, length(vert), length(vert));
+G = sparse(I, J, val, size(vert, 1), size(vert, 1));

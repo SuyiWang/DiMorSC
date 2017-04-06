@@ -7,17 +7,8 @@
 %       matlab_bgl: https://www.mathworks.com/matlabcentral/fileexchange/10922-matlabbgl
 %       vaa3d_matlab_io: the folder is in vaa3d source code.
 
-%   This file is depreacted and will be split into two files:
-%   Morse_to_tree, tree_simplification
 
-function Morse_Post(is_tree, dir_path, output_filename, persist, pos, shift)
-    handroot = 0;
-    trans = [0 0 0];
-    scale = [1 1 1];
-    if nargin > 5
-        handroot = 1;
-        trans = -shift;
-    end
+function Morse_Post(is_tree, dir_path, output_filename)
     addpath('vaa3d_matlab_io');
     addpath('privates');
     addpath('matlab_bgl');
@@ -25,60 +16,54 @@ function Morse_Post(is_tree, dir_path, output_filename, persist, pos, shift)
 
     %%  Read in graph file
     if nargin == 0
-        % dir_path = '~/Develop/density/Results/AllenInstitute/1/';
-        % dir_path = '~/Develop/density/Results/Partha/PMD1228/';
-        dir_path = 'inputs/'
-        output_filename = 'Partha_ori.swc';
+        dir_path = '~/Develop/density/Results/AllenInstitute/1/';
+        output_filename = 'Allen.swc';
         is_tree = 0;
         % dir_path = '~/Develop/density/Results/Partha/PMD1232/';
     end
     
     disp('reading graph file');
-    figure(1);
+    figure;
     if is_tree == 1
         dir_path = '';
         if nargin < 3
             output_filename = 'simplified_tree.swc';
         end
-        [vert, G] = Draw1stable([dir_path 'tree_vert.txt'],...
-                                [dir_path 'tree_edge.txt'], 'r', 1, false);
+        [vert, G] = Draw1stable([dir_path 'tree_vert.txt'],[dir_path 'tree_edge.txt']);
         final_tree = G;
     else
         %   ***Attention*** you might need change file name here.
-        [vert, G] = Draw1stable([dir_path 'outvert.txt'],[dir_path 'outedge.txt'],'r',2);
+        [vert, G] = Draw1stable([dir_path 'outvert.txt'],[dir_path 'outedge.txt']);
         %%  adjust position and scale if necessary
         disp('transforming graph to original space');
+        trans = [0 0];
+        scale = [1 1];
         vert = transformvert(vert, trans, scale);
         % vert(:,2) = 50 - vert(:,2);
 
 
         %%  clean with branch - collapse degree 2 edges
         disp('converting to abstract graph');
-        %   ToAbstract_branch(Graph, verbose, vertex_list, use_average)
-        [absG, edgeG, edgeList, abs_idx] = ToAbstract_branch(G, 0, vert, 0);
-        % DrawGraph(absG, vert(abs_idx,:),'k',1);
+        [absG, edgeG, edgeList, abs_idx] = ToAbstract_branch(G, 0, vert);
         disp('computing maximum spanning tree');
         absT = maxspanningtree(absG);
         % hold on;
         % plot3(vert(abs_idx,1),vert(abs_idx,2),vert(abs_idx,3),'b*');
-        % DrawGraph(absT, vert(abs_idx,:),'k',1);
+        % DrawGraph(absT, vert(abs_idx,:),'k',2);
         % hold off;
 
 
         %%  smooth each branch
         edgeList = s_branch(edgeList, vert, false);
-        edgeList = resample_edge(edgeList);
+        % edgeList = resample_edge(edgeList);
 
 
         %%  expand degree 2 edges and select the biggest connected component
         disp('converting back to actual graph');
-        [G, vertidx] = ToActual(absT, edgeG, edgeList, vert, 0, abs_idx);
-        disp('Selecting connected component');
-        if handroot > 0
-            [G, handroot] = SimpComponent(G, vert, pos, vertidx);
-        else
-            G = SimpComponent(G, vert);
-        end
+        G = ToActual(absT, edgeG, edgeList, vert, 0, abs_idx);
+        disp('Selecting the biggest connected component');
+        G = SimpComponent(G, vert);
+
 
         %%  Make up edges
         %   see makeup.m for details
@@ -94,24 +79,19 @@ function Morse_Post(is_tree, dir_path, output_filename, persist, pos, shift)
 
         %%  Plot results
         disp('Plotting result');
-%         DrawGraph(G, vert, 'b', 1.5);
-        DrawGraph(G+Gadd, vert(:, 1:3), 'b', 2);
-%         DrawGraph(Gadd, vert, 'k', 2);
+        DrawGraph(G+Gadd, vert, 'b', 1);
+        DrawGraph(Gadd, vert, 'k', 1);
         final_tree = G + Gadd;
     end
 
     %%  Generate files for vaa3D
     disp('writing swc file');
-    if handroot > 0
-        tt = Tree2SWCtt(final_tree, vert, 2, handroot);
-    else
-        tt = Tree2SWCtt(final_tree, vert, 2);
-    end
+    tt = Tree2SWCtt(final_tree, vert, 2);
     save_v3d_swc_file(tt, ['inputs/' output_filename])
     
     
     %%  Simplify low persistence branches;
-%     if ~is_tree
-%         persistence_simplification(persist, 0);
-%         Morse_Post(1, 'inputs/', output_filename, persist);
-%     end
+    if ~is_tree
+        persistence_simplification(10, 0);
+        Morse_Post(1, '', output_filename);
+    end

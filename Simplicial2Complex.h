@@ -380,6 +380,10 @@ void Simplicial2Complex::outputArcs(string vertexFile, string edgeFile){
 			edges.push_back((Edge*)s);
 		}
 	}
+	
+	// give vertices a new index.
+	// need reverse the function value for vertices again.
+	flipAndTranslateVertexFunction();
 	std::map<Vertex*, int> map;
 	for(int i = 0; i < vertices.size(); i++){
 		Vertex *v = vertices[i];
@@ -395,6 +399,7 @@ void Simplicial2Complex::outputArcs(string vertexFile, string edgeFile){
 		}
 		vFile << endl;
 	}
+	
 	for(int i = 0; i < edges.size(); i++){
 		Edge *e = edges[i];
 		Vertex* v1 = get<0>(e->getVertices());
@@ -546,7 +551,7 @@ void Simplicial2Complex::buildComplexFromFile2_BIN(string pathname) {
 		}
 		file.read(double_buffer, sizeof(double));
 		funcValue = *double_reader;
-		funcValue = (int)(funcValue*1e5)/1.0e5;
+		// funcValue = (int)(funcValue*1e5)/1.0e5;
 		Vertex *v = new Vertex(coords, funcValue);
 		int vPosition = this->addVertex(v);
 		// this will be over written by sorted order later

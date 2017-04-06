@@ -20,12 +20,8 @@ function [ G, handroot ] = SimpComponent( Gin, vertin, pos, realidx )
     if max(ci) > 1
         disp(max(ci));
         
+        [sorted_size, idx] = sort(sizes, 'descend');
         if handroot == 0
-            for i=1:max(ci)
-                sizes(i) = length(find(ci==i));
-            end
-            [sorted_size, idx] = sort(sizes, 'descend');
-
             mark = zeros(max(idx), 1);
             mark(idx(1)) = ones(1,1);
             [I J V] = find(G);

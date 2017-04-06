@@ -15,13 +15,13 @@ function write_output(filename, vertex, edges, triangles)
     n = size(edges, 1);
     k = size(triangles, 1);
 %%  .off file: for data validation
-    fp = fopen([filename '.off'],'w');
-    fprintf(fp,'OFF\n');
-    fprintf(fp, '%d %d %d\n', m, k, n);
-    fprintf(fp, '%f %f %f\n', vertex(:,1:3)');
-    fprintf(fp, '3 %d %d %d\n', triangles');
-    fprintf(fp, '2 %d %d\n', edges');
-    fclose(fp);
+%     fp = fopen([filename '.off'],'w');
+%     fprintf(fp,'OFF\n');
+%     fprintf(fp, '%d %d %d\n', m, k, n);
+%     fprintf(fp, '%f %f %f\n', vertex(:,1:3)');
+%     fprintf(fp, '3 %d %d %d\n', triangles');
+%     fprintf(fp, '2 %d %d\n', edges');
+%     fclose(fp);
 
     
 %%  .txt file: for discrete morse - Mainly use this file

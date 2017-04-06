@@ -16,12 +16,14 @@
 function vert = PreTriangulation(density_map, selTHD)
 %%  Truncate data using a threshold
     fprintf('Smoothing data...\n');
-%   selTHD = 5;
-    thd_map = smooth3(density_map(:,:,:),'gaussian',[7 7 5], 0.98);
-    % thd_map = smooth3(density_map(:,:,:),'gaussian',[5 5 5], 0.85);
+    thd_map = smooth3(density_map(:,:,:),'gaussian',[7 7 7], 0.98); % used for OP set
+%     thd_map = smooth3(density_map(:,:,:),'gaussian',[5 5 3], 0.70);
+%       thd_map = smooth3(density_map(:,:,:),'gaussian',[3 3 3], 0.70); %for NeuroMuscular
+%       thd_map = density_map; % do not smooth - Neocortical
+%       thd_map(thd_map < selTHD) = 0;
+%       thd_map = smooth3(thd_map(:,:,:),'gaussian',[3 3 3], 0.70);
         clrTHD = -1e-6;
-        clrIndex = find(thd_map < clrTHD);
-        thd_map(clrIndex) = 1e-6;
+        thd_map(thd_map < clrTHD) = 1e-6;
     index = find(thd_map > selTHD);
     density_map = thd_map;
     clear thd_map;
@@ -41,7 +43,7 @@ function vert = PreTriangulation(density_map, selTHD)
 %     fp = fopen('mapinput.txt','w');
     fp = fopen('mapinput.bin','w');
 
-    [I J K] = ind2sub(size(density_map), index);
+    [I J K] = ind2sub(size(density_map), index); %% index start from 1
     mnk = size(density_map);
     vert(:,:) = [I J K density_map(index)];
     clear density_map;

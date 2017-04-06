@@ -1,5 +1,10 @@
-function res_dens(hFig, dir_path, filename)
+function res_dens(hFig, dir_path, filename, trans)
 % dir_path = '~/Develop/density/Results/Partha/';
+
+if nargin < 4
+    trans = [0 0 0];
+end
+
 set(hFig, 'Position', [100 100 1200 800])
 
 fp = fopen([dir_path filename],'r');
@@ -14,15 +19,21 @@ fclose(fp);
 rand_idx = floor(rand(length(vertex), 1) * 1);
 vertex = vertex (:, rand_idx==0);
 
-idx = find(vertex(4,:) > 30);
+idx = find(vertex(4,:) > 0);
 vertex([1,2], :) = vertex([2,1], :);
+vertex(1, :) = vertex(1, :) + trans(1) - 1;
+vertex(2, :) = vertex(2, :) + trans(2) - 1;
+vertex(3, :) = vertex(3, :) + trans(3);
+
 vertex = vertex (:, idx);
 
-cmap = colormap('gray');
-cmap = flipud(cmap);
+% cmap = colormap('gray');
+% cmap = flipud(cmap);
+cmap = colormap('cool');
 hold on;
 fscatter3(vertex(1,:),vertex(2,:), vertex(3,:), log(vertex(4,:)+1), cmap);
 axis normal;
+cameratoolbar('Show')
 % scatter3(vertex(1,:),vertex(2,:), vertex(3,:), 2, vertex(4,:),'filled')
 
 % Draw1stable([dir_path 'outvert8.txt'],[dir_path 'outedge8.txt'],'c', 3);

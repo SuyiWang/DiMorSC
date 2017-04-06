@@ -8,7 +8,7 @@ function tree_simplification(tree, vert, usedidx, output_filename, persist, pos)
     if handroot > 0
         [T, handroot] = SimpComponent(tree, vert, pos, usedidx);
     else
-        T = SimpComponent(T, vert);
+        T = SimpComponent(tree, vert);
     end
 
 

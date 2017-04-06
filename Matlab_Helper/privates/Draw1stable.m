@@ -5,7 +5,7 @@
 %   dependency: DrawGraph.m
 
 
-function [vert, g] = Draw1stable(vertname, edgename, clr, linesize, flip)
+function [vert, g] = Draw1stable(vertname, edgename, clr, linesize, flip, ndraw)
 %%  Set up parameters based on input
     if (nargin < 3)
         % filename = 'test.fits_c50.up.NDskl.a.segs';
@@ -20,6 +20,9 @@ function [vert, g] = Draw1stable(vertname, edgename, clr, linesize, flip)
     if (nargin < 5)
         flip = true;
     end
+    if (nargin < 6)
+        ndraw = false;
+    end
 %     
 %     fp = fopen(filename,'r');
 %     fwrite = fopen('tmp.segs','w');
@@ -33,22 +36,46 @@ function [vert, g] = Draw1stable(vertname, edgename, clr, linesize, flip)
 %         
 %         sread = fgets(fp);
 %     end
+    if ~exist(vertname, 'file')
+        disp([vertname ' does not exist']);
+        vert = [];
+        g = [];
+        return;
+    end
+    
+    if ~exist(edgename, 'file')
+        disp([edgename ' does not exist']);
+        vert = [];
+        g = [];
+        return;
+    end
     vert = load(vertname);
     edge = load(edgename);
+    
+    
+    if isempty(edge)
+        disp('empty edge, skipping');
+        g = [];
+        return
+    end
+    
+    
 %     sometimes need swap first two dimensions
     if flip
         vert(:,[1,2]) = vert(:,[2,1]);
     end
 
 
-%%  Create adjacency graph
-    g = sparse(edge(:,1),edge(:,2), ones(length(edge),1), length(vert), length(vert));
-    DrawGraph(g, vert(:,1:3), clr, linesize);
+    %%  Create adjacency graph
+    g = sparse(edge(:,1),edge(:,2), ones(size(edge,1),1), length(vert), length(vert));
+    if linesize > 0 && ~ndraw
+        DrawGraph(g, vert(:,1:3), clr, linesize);
+    end
     
     
 %%  Mark critical edges red
-    c_edge_idx = find(edge(:,3) == 1);
-    edge = edge(c_edge_idx,:);
-    
+%     c_edge_idx = find(edge(:,3) == 1);
+%     edge = edge(c_edge_idx,:);
+%     
 %     g_critical = sparse(edge(:,1),edge(:,2), ones(size(edge,1),1), length(vert), length(vert));
 %     DrawGraph(g_critical, vert(:,1:3), 'm',2)

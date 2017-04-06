@@ -9,7 +9,6 @@
 %                   3 5 7 8 div2 does not work - Olfactory
 
 
-function LoadOlfactory_OP(dataset, selTHD)
 %%  Data sets - Change this if necessary
     addpath('privates');
 %   olfactory data
@@ -21,6 +20,7 @@ function LoadOlfactory_OP(dataset, selTHD)
 
 
 %%  Loop over several data sets (if there is any)
+    for dataset = 1:9 % Olfactory data
 %       olfactory data
         path = [default_path int2str(dataset) '/'];
 
@@ -161,11 +161,12 @@ function LoadOlfactory_OP(dataset, selTHD)
 %%      Create simplicial complex
         clear data; clear writedata;
         
-        PreTriangulation(imgdata, selTHD);
+        PreTriangulation(imgdata);
         clear imgdata;
 
 %         Triangulate(['inputs/Olfactory_OP_' int2str(dataset)], 0);
         Triangulate(['inputs/Olfactory_OP_' int2str(dataset)], 1);
         disp('***************DONE********************');
+    end
 
 

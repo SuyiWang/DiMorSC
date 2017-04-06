@@ -20,8 +20,8 @@ function [final_tree, vert, usedidx] = Morse_to_tree(dir_path, input_filename, s
         % dir_path = '~/Develop/density/Results/Partha/PMD1232/';
     end
     
-    if nargin > 3
-        trans = -shift;
+    if nargin == 3
+        trans = shift;
     end
     addpath('vaa3d_matlab_io');
     addpath('privates');
@@ -30,9 +30,14 @@ function [final_tree, vert, usedidx] = Morse_to_tree(dir_path, input_filename, s
 
     %%  Read in graph file
     disp('reading graph file');
-    figure(1);
-    [vert, G] = Draw1stable([dir_path input_filename{1}],[dir_path input_filename{2}],'r',2);
-    
+%     figure(2);
+    [vert, G] = Draw1stable([dir_path input_filename{1}],[dir_path input_filename{2}], 'c', 0, false);
+    if isempty(G)
+        final_tree = [];
+        vert = [];
+        usedidx = [];
+        return
+    end
     
     %%  adjust position and scale if necessary
     disp('transforming graph to original space');
@@ -59,10 +64,31 @@ function [final_tree, vert, usedidx] = Morse_to_tree(dir_path, input_filename, s
 
     %%  expand degree 2 edges
     disp('converting back to actual graph');
-    [G, usedidx] = ToActual(absT, edgeG, edgeList, vert, 0, abs_idx);
+    [newG, usedidx] = ToActual(absT, edgeG, edgeList, vert, 0, abs_idx);
     disp('Selecting connected component');
 
 
+    %%  Through away small connected components
+    newG = newG'+newG;
+    [ci, sizes] = components(newG);
+    disp('# of components:');
+    disp(max(ci));
+    disp('remove redundant components');
+    
+    [sorted_size, idx] = sort(sizes, 'descend');
+    keepmark = find(sorted_size>00);
+    mark = zeros(max(idx), 1);
+    mark(idx(keepmark)) = 1;
+    [I J V] = find(newG);
+    for i = length(I):-1:1
+        if (mark(ci(I(i)))==0||mark(ci(J(i)))==0)
+            I(i) = []; J(i) = []; V(i) = [];
+        end
+    end
+    newG = sparse(I, J, V, size(vert, 1), size(vert, 1)); %+sparse(J, I, V, n, n);
+
+    
+    
     %%  Make up edges
     %   see makeup.m for details
     disp('making up edges');
@@ -72,5 +98,12 @@ function [final_tree, vert, usedidx] = Morse_to_tree(dir_path, input_filename, s
 
     %%  Plot results
     disp('Plotting result');
-    DrawGraph(G+Gadd, vert(:, 1:3), 'b', 2);
-    final_tree = G + Gadd;
+%     DrawGraph(G, vert(:, 1:3), 'c', 2);
+
+    if ~isempty(Gadd) && ~isempty(newG)
+        final_tree = newG + Gadd;
+    else
+        final_tree = newG;
+    end
+    % rand(1,3)
+    DrawGraph(final_tree, vert(:, 1:3), rand(1,3), 1);

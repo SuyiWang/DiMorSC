@@ -71,6 +71,10 @@ for i = 1:length(abs_idx)
                 rmvmark(list(j)) = 1;
                 edgeidx(edgetop) = list(j);
                 edgetop = edgetop + 1;
+                
+                if (vert(list(j),1)==142 && vert(list(j), 2) == 248)
+                    disp('');
+                end
 
                 if verbose
                     hold on;

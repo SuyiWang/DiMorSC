@@ -9,7 +9,7 @@ Comments: Vertex index start from 1. All edges and triangles uses vertex index.
 */
 
 
-// g++ Triangulation_new_hash.cpp -std=c++11 -I /home/wangsu/Develop/Neuro/DiademMetric/persistence/boost_1_59_0/ -o triangulate_new
+// g++ Triangulation.cpp -std=c++11 -I /home/wangsu/Develop/Neuro/DiademMetric/persistence/boost_1_59_0/ -o triangulate
 
 
 #include<stdio.h>
@@ -18,12 +18,15 @@ Comments: Vertex index start from 1. All edges and triangles uses vertex index.
 #include<vector>
 #include<string>
 #include<algorithm>
+#include<time.h>
+#include<cstdlib>
 // #include<unordered_map>
 // #include<unordered_set>
 
 #include <boost/tuple/tuple.hpp>
 #include <boost/tuple/tuple_comparison.hpp>
 #include <boost/unordered_set.hpp>
+#include <boost/unordered_map.hpp>
 
 using namespace std;
 
@@ -35,7 +38,9 @@ using namespace std;
 int nb = 12;
 
 struct point{
-    double x,y,z,v;
+	int x,y,z;
+	double v;
+	bool in_bbox;
 };
 
 // Edge pair
@@ -68,6 +73,7 @@ struct tetra{
 vector<point> vertex;
 vector<cp> edge;
 vector<tp> triangle;
+
 // vector<tetra> tetrahedron;
 
 int vertcount = 1;
@@ -161,6 +167,47 @@ int HEIGHT, WIDTH, DEPTH, LENGTH;
 			}
 	};
 #else
+	// *********** begin vertex pair***********
+	std::size_t hash_value(const point &pt){
+	  std::size_t seed = 0;
+	  boost::hash_combine(seed, pt.x);
+	  boost::hash_combine(seed, pt.y);
+	  boost::hash_combine(seed, pt.z);
+	  return seed;
+	}
+
+	bool operator==(const point &a, const point &b)
+	{
+	  return a.x == b.x && a.y == b.y && a.z == b.z;
+	}
+
+	class VertexHash{
+		private:
+			boost::unordered_map<point, int> v_hash;
+		public:
+			VertexHash(){
+				v_hash.clear();
+			}
+			int GetIndex(point p){
+				if (v_hash.count(p) > 0)
+					return v_hash[p];
+				else
+					return -1;
+			}
+			void InsertVertex(point p, int n){
+				v_hash.insert(make_pair(p, n));
+			}
+			int size(){return v_hash.size();}
+			boost::unordered_map<point, int>::iterator begin(){
+				return v_hash.begin();
+			}
+			boost::unordered_map<point, int>::iterator end(){
+				return v_hash.end();
+			}
+	};
+	// *********** End of vertex pair ***********
+
+
 	std::size_t hash_value(const cp &e){
 	  std::size_t seed = 0;
 	  boost::hash_combine(seed, e.p1);
@@ -218,11 +265,17 @@ int HEIGHT, WIDTH, DEPTH, LENGTH;
 	};
 #endif
 
+
+VertexHash vh;
+TriangleHash th;
+EdgeHash eh;
+
+
 void bin_init(string filename){
 	vertex.clear(); edge.clear(); triangle.clear(); 
 	// tetrahedron.clear();
     ifstream binaryIO;
-    binaryIO.open("mapinput.bin", ios::binary);
+    binaryIO.open(filename.c_str(), ios::binary);
     if (!binaryIO.is_open()){
     	printf("Error opening file\n");
     	return;
@@ -279,7 +332,7 @@ void bin_init(string filename){
     printf("done\n");
 }
 
-int triangle_cube(int i, int j, int k, int AB, TriangleHash &th, EdgeHash &eh){
+int triangle_cube(int i, int j, int k, int AB){
     if (AB == 0){ // triangles of Type A
         int TypeAtri[3*16][3] = {{0,0,0}, {1,0,1}, {0,0,1},
                           {0,0,0}, {1,0,0}, {1,0,1},
@@ -576,9 +629,6 @@ void bin_output(){
 
 
 int triangulation_with_vertex(){
-	TriangleHash th;
-	EdgeHash eh;
-
     double THD = -1e-6;
 	int original_total = vertex.size();
 //    int counter = 0;
@@ -597,13 +647,217 @@ int triangulation_with_vertex(){
 		}
 		marked[i][j][k] = 1;
 		if ((i+j+k)%2==1){
-			triangle_cube(i, j, k, 0, th, eh);
+			triangle_cube(i, j, k, 0);
 		}
 		else{
-			triangle_cube(i, j, k, 1, th, eh);
+			triangle_cube(i, j, k, 1);
 		}
-	}/*
-	for(int v = 0; v < original_total; ++v){
+	}
+    printf("Done\n");
+    return 0;
+}
+
+
+void triangle_2D(int i, int j, int AB){
+	if (AB == 0){ // Type A
+        int TypeAtri[3*2][2] = {{0,0}, {1,0}, {0,1},
+                          {0,1}, {1,0}, {1,1}
+                   };
+        for (int cnt = 0; cnt < nb; cnt++){
+        	int sub1, sub2, sub3;
+            point p;
+            p.x = i + TypeAtri[cnt*3][0]; p.y = j + TypeAtri[cnt*3][1]; p.z = 0;
+            sub1 = vh.GetIndex(p);
+            if (sub1 < 0){
+            	p.v = 1e-6;
+                vh.InsertVertex(p, vertcount);
+                sub1 = vertcount;
+                vertcount++;
+                vertex.push_back(p);
+            }
+			
+			p.x = i + TypeAtri[cnt*3+1][0]; p.y = j + TypeAtri[cnt*3+1][1]; p.z = 0;
+			sub2 = vh.GetIndex(p);
+            if (sub2 < 0){
+                p.v = 1e-6;
+                vh.InsertVertex(p, vertcount);
+                sub2 = vertcount;
+              	vertcount++;
+                vertex.push_back(p);
+            }
+
+			p.x = i + TypeAtri[cnt*3+2][0]; p.y = j + TypeAtri[cnt*3+2][1]; p.z = 0;
+			sub3 = vh.GetIndex(p);
+            if (sub3 < 0){
+                p.v = 1e-6;
+                vh.InsertVertex(p, vertcount);
+                sub3 = vertcount;
+                vertcount++;
+                vertex.push_back(p);
+            }
+            
+            tp new_triangle;
+            new_triangle.p1 = sub1; new_triangle.p2 = sub2; new_triangle.p3 = sub3;
+			new_triangle.Reorder();
+			if (!th.HasTriangle(new_triangle)){
+				triangle.push_back(new_triangle);
+				th.InsertTriangle(new_triangle);
+			}
+
+            cp new_edge1;
+            new_edge1.p1 = sub1; new_edge1.p2 = sub2;
+			new_edge1.Reorder();
+            cp new_edge2;
+            new_edge2.p1 = sub1; new_edge2.p2 = sub3;
+			new_edge2.Reorder();
+            cp new_edge3;
+            new_edge3.p1 = sub2; new_edge3.p2 = sub3;
+			new_edge3.Reorder();
+
+            if (DEBUG){
+                printf("%d %d %d\n", sub1, sub2, sub3);
+            }
+
+            if (!eh.HasEdge(new_edge1)){
+				edge.push_back(new_edge1);
+				eh.InsertEdge(new_edge1);
+			}
+			if (!eh.HasEdge(new_edge2)){
+				edge.push_back(new_edge2);
+				eh.InsertEdge(new_edge2);
+			}
+			if (!eh.HasEdge(new_edge3)){
+				edge.push_back(new_edge3);
+				eh.InsertEdge(new_edge3);
+			}
+        }
+    }
+    else{// Type B
+        int TypeAtri[3*2][2] = {{0,0}, {1,0}, {1,1},
+                          {0,0}, {0,1}, {1,1}
+                   };
+        for (int cnt = 0; cnt < nb; cnt++){
+        	int sub1, sub2, sub3;
+            point p;
+            p.x = i + TypeAtri[cnt*3][0]; p.y = j + TypeAtri[cnt*3][1]; p.z = 0;
+            sub1 = vh.GetIndex(p);
+            if (sub1 < 0){
+            	p.v = 1e-6;
+                vh.InsertVertex(p, vertcount);
+                sub1 = vertcount;
+                vertcount++;
+                vertex.push_back(p);
+            }
+			
+			p.x = i + TypeAtri[cnt*3+1][0]; p.y = j + TypeAtri[cnt*3+1][1]; p.z = 0;
+			sub2 = vh.GetIndex(p);
+            if (sub2 < 0){
+                p.v = 1e-6;
+                vh.InsertVertex(p, vertcount);
+                sub2 = vertcount;
+              	vertcount++;
+                vertex.push_back(p);
+            }
+
+			p.x = i + TypeAtri[cnt*3+2][0]; p.y = j + TypeAtri[cnt*3+2][1]; p.z = 0;
+			sub3 = vh.GetIndex(p);
+            if (sub3 < 0){
+                p.v = 1e-6;
+                vh.InsertVertex(p, vertcount);
+                sub3 = vertcount;
+                vertcount++;
+                vertex.push_back(p);
+            }
+            
+            tp new_triangle;
+            new_triangle.p1 = sub1; new_triangle.p2 = sub2; new_triangle.p3 = sub3;
+			new_triangle.Reorder();
+			if (!th.HasTriangle(new_triangle)){
+				triangle.push_back(new_triangle);
+				th.InsertTriangle(new_triangle);
+			}
+
+            cp new_edge1;
+            new_edge1.p1 = sub1; new_edge1.p2 = sub2;
+			new_edge1.Reorder();
+            cp new_edge2;
+            new_edge2.p1 = sub1; new_edge2.p2 = sub3;
+			new_edge2.Reorder();
+            cp new_edge3;
+            new_edge3.p1 = sub2; new_edge3.p2 = sub3;
+			new_edge3.Reorder();
+
+            if (DEBUG){
+                printf("%d %d %d\n", sub1, sub2, sub3);
+            }
+
+            if (!eh.HasEdge(new_edge1)){
+				edge.push_back(new_edge1);
+				eh.InsertEdge(new_edge1);
+			}
+			if (!eh.HasEdge(new_edge2)){
+				edge.push_back(new_edge2);
+				eh.InsertEdge(new_edge2);
+			}
+			if (!eh.HasEdge(new_edge3)){
+				edge.push_back(new_edge3);
+				eh.InsertEdge(new_edge3);
+			}
+        }
+    }
+    return;
+}
+
+
+void init_2D(string filename){
+	vertex.clear(); edge.clear(); triangle.clear(); 
+    ifstream binaryIO;
+    binaryIO.open(filename.c_str(), ios::binary);
+    if (!binaryIO.is_open()){
+    	printf("Error opening file\n");
+    	return;
+    }
+    
+    char* header_data = new char[sizeof(int) * 1];
+    
+    binaryIO.read(header_data, sizeof(int) * 1);
+	int* header_value = (int*) header_data;
+	LENGTH = header_value[0];
+
+	cout << *header_value << endl;
+    printf("Reading 2D density matrix: total %d Lines\n", LENGTH);
+    char* density_data = new char[sizeof(double) * 3];
+    double* density_value = (double*) density_data;
+    for (int len = 0; len < LENGTH; ++len){
+        if (DEBUG&&len%10000 == 0)
+            printf("%d\n", len);
+        int i, j, k;
+        double v;
+        
+        binaryIO.read(density_data, sizeof(double) * 3);
+		i = floor(density_value[0] + 0.5);
+		j = floor(density_value[1] + 0.5);
+        v = density_value[2];
+
+        point p;
+        p.x = i; p.y = j; p.z = 0; p.v = v;
+        int idx = -1;
+        idx = vh.GetIndex(p);
+        if (idx < 0){
+	        vertex.push_back(p);
+	        vh.InsertVertex(p, vertcount);
+	        vertcount++;
+	    }
+    }
+    binaryIO.close();
+    printf("done\n");
+}
+
+void triangulation_2D(){
+    double THD = -1e-6;
+	int original_total = vertex.size();
+//    int counter = 0;
+    for(int v = 0; v < original_total; ++v){
 		int i, j, k, val;
 		if (v%10000==0){
 			cout << '\r';
@@ -611,51 +865,55 @@ int triangulation_with_vertex(){
 			cout.flush();
 		}
 		
-		i = vertex[v].x; j = vertex[v].y; k = vertex[v].z; val = vertex[v].v;
+		i = vertex[v].x; j = vertex[v].y; val = vertex[v].v;
 		if (val < THD) {
 			cout << "skipped something\n";
 			continue;
 		}
-		for(int x = -5; x < 5; ++x)
-			for(int y = -5; y < 5; ++y)
-				for(int z = -3; z < 3; ++z)
-				{
-					if (i+x < 0 || i+x >= HEIGHT || j+y < 0 || j+y >= WIDTH
-						|| k+z < 0 || k+z >= DEPTH) continue;
-					if (marked[i+x][j+y][k+z]) continue;
-					marked[i+x][j+y][k+z] = 1;
-					if ((i+x+j+y+k+z)%2==1){
-						triangle_cube(i+x, j+y, k+z, 0, th, eh);
-					}
-					else{
-						triangle_cube(i+x, j+y, k+z, 1, th, eh);
-					}
-				}
-    }*/
+		srand(time(NULL));
+		if (rand() % 2){
+			triangle_2D(i, j, 0);
+		}
+		else{
+			triangle_2D(i, j, 1);
+		}
+	}
     printf("Done\n");
-    return 0;
+    return;
 }
 
 
 int main(int argc, char* argv[])
 {
-	if (argc == 2){
-		int fillnot = atoi(argv[1]);
-		if (!fillnot) nb = 12;
-			else nb = 16;
-	}
-	else {
-		cout << "usage: triangulation [fill]\n";
+	if (argc <= 1 || argc >3){
+		cout << "usage: triangulation [fill] [2 (2D)/3 (3D)]\n";
 		return 0;
 	}
+	int fillnot = atoi(argv[1]);
+	if (!fillnot) nb = 12;
+		else nb = 16;
+	int dimension = 3;
 	
-    string filename = "mapinput.txt";
+	if(argc == 3){
+		dimension = atoi(argv[2]);
+	}
+	
+	if(dimension == 2){
+		nb = 2;
+	}
+    string filename = "mapinput.bin";
 
     printf("Initializing input\n");
-	bin_init(filename);
+    if (dimension ==3)
+		bin_init(filename);
+	else
+		init_2D(filename);
 
     printf("Computing triangulation\n");
-	triangulation_with_vertex();
+    if (dimension == 3)
+		triangulation_with_vertex();
+	else
+		triangulation_2D();
 
     printf("Writing output\n");
 	bin_output();
