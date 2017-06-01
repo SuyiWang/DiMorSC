@@ -15,7 +15,7 @@ This is software (Discrete Morse on Simplicial Complex) that extract 1-stable ma
 vert.txt:
 Each line specifies a vertex: x y z f critical. xyz are the coordinates of the vertex. f denotes the function value on the vertex. critical decalres the criticality of the vertex - (-1) means ordinary.
 edge.txt:
-Each line specifies an edge: v1 v2 critial. v1 v2 are two indices of the edge - index starts from 1. (This is DIFFERENT! It is designed this way because the post processing scripts are all in MATLAB). critical decalres the criticality of the edge - (-1) means ordinary.
+Each line specifies an edge: v1 v2 critial density. v1 v2 are two indices of the edge - index starts from 1. (This is DIFFERENT! It is designed this way because the post processing scripts are all in MATLAB). critical decalres the criticality of the edge - (-1) means ordinary. density specify the maximum intensity of its supporting saddle - later, the edges with low density can be removed using a threshold.
 
 2. Makecommand - sample command for building DiMoSC.
 
