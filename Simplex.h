@@ -55,6 +55,7 @@ class Edge:public Simplex{
 	int vertices[2];		// vertices should be sorted
 	int ePosition;
 	Vertex* vp[2];
+	double eval = 0;		// used to mark supporting saddle
 	// moved to Class Simplicialcomplex
 	// vector<Triangle*> incidenceList;
 
@@ -80,7 +81,8 @@ public:
 	void output(ofstream& ofs){
 	    ofs << vertices[0] << "~" << vertices[1] << ":" << ePosition << "@" << dim <<"\n";
 	}
-	
+	double getEval() {return eval;}
+	void setEval(double v) {eval = v;}
 	// Deprecated functions
 };
 

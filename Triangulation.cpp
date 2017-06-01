@@ -579,8 +579,9 @@ int triangle_cube(int i, int j, int k, int AB){
 }
 
 
-void bin_output(){
-    ofstream ofs("vert.bin",ios::binary);
+void bin_output(string id){
+	string vname = id + "_vert.bin";
+    ofstream ofs(vname,ios::binary);
     printf("writing vertex\n");
     char* vert = new char[sizeof(double) * 4];
     double* vert_buffer = (double*) vert;
@@ -590,8 +591,9 @@ void bin_output(){
 		ofs.write(vert, sizeof(double) * 4);
     }
     ofs.close();
-
-	ofs.open("edge.bin", ios::binary);
+	
+	string ename = id + "_edge.bin";
+	ofs.open(ename, ios::binary);
     printf("writing edge\n");
     char* edgechar = new char[sizeof(int) * 2];
     int* edge_buffer = (int*) edgechar;
@@ -600,8 +602,9 @@ void bin_output(){
         ofs.write(edgechar, sizeof(int) * 2);
     }
     ofs.close();
-
-    ofs.open("triangle.bin", ios::binary);
+	
+	string tname = id + "_triangle.bin";
+    ofs.open(tname, ios::binary);
     printf("writing triangle\n");
     char* trianglechar = new char[sizeof(int) * 3];
     int* triangle_buffer = (int*) trianglechar;
@@ -612,19 +615,6 @@ void bin_output(){
         ofs.write(trianglechar, sizeof(int) * 3);
     }
     ofs.close();
-    
-    
-    /*
-    ofs.open("tetrahedron.bin", ios::binary);
-    printf("writing tetrahedron\n");
-    char* tetchar = new char[sizeof(int) * 4];
-    int* tet_buffer = (int*) tetchar;
-    for (int i = 0; i < tetrahedron.size(); i++){
-		for (int j = 0; j < 4; ++j)
-			tet_buffer[j] = tetrahedron[i].p[j];
-        ofs.write(tetchar, sizeof(int) * 4);
-    }
-    ofs.close();*/
 }
 
 
@@ -885,23 +875,20 @@ void triangulation_2D(){
 
 int main(int argc, char* argv[])
 {
-	if (argc <= 1 || argc >3){
-		cout << "usage: triangulation [fill] [2 (2D)/3 (3D)]\n";
+	if (argc != 4){
+		cout << "usage: triangulation <id> <fill> <2 (2D)/3 (3D)>\n";
 		return 0;
 	}
-	int fillnot = atoi(argv[1]);
+	string id(argv[1]);
+	int fillnot = atoi(argv[2]);
 	if (!fillnot) nb = 12;
 		else nb = 16;
-	int dimension = 3;
-	
-	if(argc == 3){
-		dimension = atoi(argv[2]);
-	}
+	int dimension = atoi(argv[3]);
 	
 	if(dimension == 2){
 		nb = 2;
 	}
-    string filename = "mapinput.bin";
+    string filename = id + "_dens.bin";
 
     printf("Initializing input\n");
     if (dimension ==3)
@@ -916,7 +903,7 @@ int main(int argc, char* argv[])
 		triangulation_2D();
 
     printf("Writing output\n");
-	bin_output();
+	bin_output(id);
 
     printf("Done\n");
     return 0;

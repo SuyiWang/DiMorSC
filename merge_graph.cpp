@@ -619,7 +619,7 @@ int main(int argc, char* argv[])
 	cout << "Normalize factor: " << norm_const << endl;
 
 	vector<int> bbox;
-	for(int i = 1; i <= max_file; i++){
+	for(int i = 0; i < max_file; i++){
 		string filename = prefix + to_string(i);
 		printf("Processing Graph %s...\n", filename.c_str());
 		
@@ -630,12 +630,14 @@ int main(int argc, char* argv[])
 		
 
 		// for NeuroMuscular and Neocortical
-		int xmin = trans_info[j*4] + 512/20.0;		bbox.push_back(xmin);
-		int xmax = trans_info[j*4] + 512*0.95;		bbox.push_back(xmax);
-		int ymin = trans_info[j*4 + 1] + 512/20.0;	bbox.push_back(ymin);
-		int ymax = trans_info[j*4 + 1] + 512*0.95;	bbox.push_back(ymax);
-		int zmin = trans_info[j*4 + 2] + lz / 20;		bbox.push_back(zmin);
-		int zmax = trans_info[j*4 + 2] + lz * 0.95;		bbox.push_back(zmax);
+		// This part is still hard coded.
+		
+		int xmin = trans_info[j*4] + 512/50.0;		bbox.push_back(xmin);
+		int xmax = trans_info[j*4] + 512*0.98;		bbox.push_back(xmax);
+		int ymin = trans_info[j*4 + 1] + 512/50.0;	bbox.push_back(ymin);
+		int ymax = trans_info[j*4 + 1] + 512*0.98;	bbox.push_back(ymax);
+		int zmin = trans_info[j*4 + 2] + 0;		bbox.push_back(zmin);
+		int zmax = trans_info[j*4 + 2] + 300;		bbox.push_back(zmax);
 		
 
 		// for OP

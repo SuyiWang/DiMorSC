@@ -53,7 +53,7 @@ int main(int argc, char* argv[]){
     	// argv[4] - dimension
     	// argv[5] - use_previous - optional
     	// argv[6] - triangle threshold - under experiment
-		cout << "Usage: ./densityRips <input_file> <output_file> <persistence_threshold> <dimension> [use_previous]"
+		cout << "Usage: ./DiMOSC <input_file> <output_file> <persistence_threshold> <dimension> [use_previous]"
 		<<endl;
 		return 0;
     }else{
@@ -120,9 +120,16 @@ int main(int argc, char* argv[]){
 		cout << "Done\n";
 		cout.flush();
 		// cin.get();
+		
+		// Build psudo morse function
+		cout << "Building pseudo-Morse function...\n";
+		K.buildPsuedoMorseFunction();
+		cout << "Done\n";
+		cout.flush();
 	}
 
 	cout << "Cancelling persistence pairs with delta " << ve_delta << "\n";
+	// Cancellation does not use function values on simplicies
 	K.cancelPersistencePairs(ve_delta);
 	cout << "Done\n";
 	cout.flush();

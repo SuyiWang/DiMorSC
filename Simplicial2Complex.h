@@ -133,6 +133,7 @@ public:
 	// procedural functions
 	void buildComplexFromFile2_BIN(string pathname);
 	void Load_Presaved(string input, string presave);
+	void updatePsuedoMorseFunction(Edge* e);
 	void buildPsuedoMorseFunction();
 	void buildFiltrationWithLowerStar();
 	void PhatPersistence();
@@ -287,20 +288,29 @@ void Simplicial2Complex::outputArcs(string vertexFile, string edgeFile, double e
 	}
 	test_o.close();
 	*/
-	
+	// need reverse the function value for vertices again.
+	flipAndTranslateVertexFunction();
+	cout << "flipped to original vertex function values" << endl;
 	
 	int counter = 0;
-	int i = 0;
 	for(unordered_set<Simplex*>::iterator it = cBegin(); it != cEnd(); it++){
 		Simplex *s = *it;
 
 		if(s->dim == 1){
 			Edge *e = (Edge*)s;
+			// For an e-t pair, if persistence is low, skip it.
 			if (e->critical_type == 2 && e->persistence < et_delta + EPS_compare) continue;
 			
+			updatePsuedoMorseFunction(e);
+			double support_f = e->funcValue;
 			set<Simplex*> *manifold = descendingManifold((Simplex*)e);
 
 			for (set<Simplex*>::iterator it2 = manifold->begin(); it2 != manifold->end(); it2++){
+				if ((*it2)->dim == 1){
+					Edge* te = (Edge*)(*it2);
+					if (te->getEval() < support_f)
+						te->setEval(support_f);
+				}
 				manifolds.insert(*it2);
 			}
 			delete manifold;
@@ -323,8 +333,6 @@ void Simplicial2Complex::outputArcs(string vertexFile, string edgeFile, double e
 	}
 	
 	// give vertices a new index - > starting from 1
-	// need reverse the function value for vertices again.
-	flipAndTranslateVertexFunction();
 	std::map<Vertex*, int> map;
 	for(int i = 0; i < vertices.size(); i++){
 		Vertex *v = vertices[i];
@@ -348,10 +356,11 @@ void Simplicial2Complex::outputArcs(string vertexFile, string edgeFile, double e
 		Vertex* v2 = &vertexList[e_vert[1]];
 		eFile << map.find(v1)->second << " " << map.find(v2)->second << " ";
 		if(this->criticalSet.count((Simplex*)e) > 0){
-			eFile << "1";
+			eFile << "1 ";
 		}else{
-			eFile << "-1";
+			eFile << "-1 ";
 		}
+		eFile << e->getEval();
 		eFile << endl;
 	}
 }
@@ -524,6 +533,17 @@ void Simplicial2Complex::buildPsuedoMorseFunction(){
 		}
 		t->setFuncValue(max->getFuncValue());
 	}
+}
+
+void Simplicial2Complex::updatePsuedoMorseFunction(Edge* e){
+	int* vertices = e->getVertices();
+	Vertex *max = &vertexList[vertices[0]];
+	Vertex *v2 = &vertexList[vertices[1]];
+	
+	if (v2->getFuncValue() > max->getFuncValue()){
+		max = v2;
+	}
+	e->setFuncValue(max->getFuncValue());
 }
 
 set<Simplex*>* Simplicial2Complex::descendingManifold(Simplex* s){
