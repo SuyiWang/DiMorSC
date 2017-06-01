@@ -1,10 +1,9 @@
-g++ densityRips.cpp -I./phat/include -std=c++11 -o density3D
-g++ densityRips.cpp -I./phat/include -std=c++11 -o density3D -w
+g++ DiMoSC.cpp -I./phat/include -std=c++11 -o DiMoSC -w
 
 # the last parameter 20 is the persistence threshold
-./density3D Allen.txt output_vert.txt output_edge.txt 20
-./density3D Allen.txt output_vert.txt output_edge.txt 20 3
-./density3D gridComplex.txt berlinvert.txt berlinedge.txt 20 2
+./DiMoSC Allen.txt output 20 3
+./DiMoSC Allen.txt output 20 3 
+./DiMoSC gridComplex.txt berlin 20 2
 
 The pipeline includes 3 steps:
 1. Run LoadAllen in matlab
