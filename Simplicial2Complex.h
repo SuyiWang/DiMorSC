@@ -291,9 +291,10 @@ void Simplicial2Complex::outputArcs(string vertexFile, string edgeFile, double e
 	// need reverse the function value for vertices again.
 	flipAndTranslateVertexFunction();
 	cout << "flipped to original vertex function values" << endl;
-	
+	cout << "Collecting 1-stable manifold" << endl;
 	int counter = 0;
 	for(unordered_set<Simplex*>::iterator it = cBegin(); it != cEnd(); it++){
+		//cout << counter << endl;
 		Simplex *s = *it;
 
 		if(s->dim == 1){
@@ -302,7 +303,11 @@ void Simplicial2Complex::outputArcs(string vertexFile, string edgeFile, double e
 			if (e->critical_type == 2 && e->persistence < et_delta + EPS_compare) continue;
 			
 			updatePsuedoMorseFunction(e);
-			double support_f = e->funcValue;
+			
+			// This value will be used for further simplification.
+			// double support_f = e->funcValue;
+			double support_f = e->persistence;
+			
 			set<Simplex*> *manifold = descendingManifold((Simplex*)e);
 
 			for (set<Simplex*>::iterator it2 = manifold->begin(); it2 != manifold->end(); it2++){
@@ -657,20 +662,29 @@ bool Simplicial2Complex::simplexPointerCompare2(const Simplex *s, const Simplex 
 			//3 cases
 			if (d1 == 0){
 				//by vPosition
+				if (((Vertex*)s)->getVPosition() == ((Vertex*)t)->getVPosition()) cout << "Caught duplicate vertex\n";
 				return ((Vertex*)s)->getVPosition() < ((Vertex*)t)->getVPosition();
 			}
 			else if (d1 == 1){
+                // old version, where only vertices are compared.
+                
 				Edge* e1 = (Edge*)s;
 				Edge* e2 = (Edge*)t;
 				Vertex** e1v = e1->get_vp();
 				Vertex** e2v = e2->get_vp();
-				
+				/*
 				for(int i = 0; i < 2; ++i){
 					if (e1v[i] != e2v[i])
 						return simplexPointerCompare2((Simplex*)e1v[i], (Simplex*)e2v[i]);
 				}
 				cout << "Caught edge with same set of vertices\n";
 				return false;
+                */
+                if (e1v[0] != e2v[0])
+					return simplexPointerCompare2((Simplex*)e1v[0], (Simplex*)e2v[0]);
+                else
+                    return e1->Grad() > e2->Grad();
+                
 			}
 			else{
 				Triangle* t1 = (Triangle*) s;
@@ -723,7 +737,8 @@ void Simplicial2Complex::cancelAlongVPath(vector<Simplex*>* VPath){
 	}
 }
 
-vector<Simplex*> Simplicial2Complex::LowerStar(int v){ // original index
+/*
+vector<Simplex*> Simplicial2Complex::LowerStar(int v){ // original index - OLD
 	unordered_set<Simplex*> ls;
 	ls.clear();
 	
@@ -734,13 +749,6 @@ vector<Simplex*> Simplicial2Complex::LowerStar(int v){ // original index
 		// find the other vertex.
 		int e2 = verts[0];
 		if (e2 == v) e2 = verts[1];
-		
-		/*
-		// check if the compare function has problem
-		if (Simplex::simplexPointerCompare2(e2, v) && Simplex::simplexPointerCompare2(v, e2)){
-			cout<< "this sholdn't happen\n";
-		}
-		*/
 		
 		if (simplexPointerCompare2(atV(e2), atV(v))){
 			ls.insert(atE(*edge));
@@ -760,6 +768,63 @@ vector<Simplex*> Simplicial2Complex::LowerStar(int v){ // original index
 		rtn.push_back(*s);
 	}
 	sort(rtn.begin(), rtn.end(), simplexPointerCompare2);
+	return rtn;
+}
+*/
+
+vector<Simplex*> Simplicial2Complex::LowerStar(int v){ // original index
+	unordered_set<Simplex*> ls;
+	ls.clear();
+	
+	// iterate all incident edges
+	vector<int>* inci_e = get_edge_v(v);
+	for (auto edge = inci_e->begin(); edge != inci_e->end(); ++edge){
+		int* verts = (atE(*edge))->getVertices();
+		// find the other vertex.
+		int e2 = verts[0];
+		if (e2 == v) e2 = verts[1];
+		
+		if (simplexPointerCompare2(atV(e2), atV(v))){
+			ls.insert(atE(*edge));
+        }
+	}
+
+	vector<Simplex*> edges;
+	edges.clear();
+	for (auto s = ls.begin(); s != ls.end(); ++s){
+		edges.push_back(*s);
+	}
+	sort(edges.begin(), edges.end(), simplexPointerCompare2);
+    
+    // take each sorted edge
+    vector<Simplex*> rtn;
+	rtn.clear();
+    for(auto edge = edges.begin(); edge != edges.end(); ++edge){
+        Edge* e = (Edge*)(*edge);
+        int* verts = e->getVertices();
+		// find the other vertex.
+		int e2 = verts[0];
+        if (e2 == v) e2 = verts[1];
+        int ep = e->getEPosition();
+        vector<int>* inci_tri = get_triangle_e(ep);
+        
+        vector<Simplex*> triangles; triangles.clear();
+        for (auto tri = inci_tri->begin(); tri != inci_tri->end(); ++ tri){
+	    if (ls.count(atT(*tri)) > 0) continue;
+            int e3 = oppsiteVertex(ep, *tri);
+            if (simplexPointerCompare2(atV(e3), atV(v))){
+                triangles.push_back(atT(*tri));
+                ls.insert(atT(*tri));
+            }
+        }
+        sort(triangles.begin(), triangles.end(), simplexPointerCompare2);
+        
+        rtn.push_back(*edge);
+        for(auto tri = triangles.begin(); tri != triangles.end(); ++tri){
+            rtn.push_back(*tri);
+        }
+    }
+    
 	return rtn;
 }
 
@@ -814,7 +879,7 @@ void Simplicial2Complex::PhatPersistence(){
 	// generate boundary matrix
 	cout << "\tInitializing boundary matrix...\n";
 	cout << "\t\tMatrix size: " << this->filtration.size() << "\n";
-	phat::boundary_matrix< phat::vector_vector > boundary_matrix;
+	phat::boundary_matrix< phat::bit_tree_pivot_column > boundary_matrix;
 	boundary_matrix.set_num_cols(this->filtration.size());
 	
 	std::vector< phat::index > temp_col;
@@ -868,10 +933,17 @@ void Simplicial2Complex::PhatPersistence(){
 	
 	// call Phat
 	cout << "\tComputing persitence pairs...\n";
+	/*
+	The "standard" algorithm (see [1], p.153)
+	The "row" algorithm from [2] (called pHrow in that paper)
+	The "twist" algorithm, as described in [3] (default algorithm)
+	The "chunk" algorithm presented in [4]
+	The "spectral sequence" algorithm (see [1], p.166)
+	*/
 	phat::persistence_pairs pairs;
 	phat::compute_persistence_pairs\
-		< phat::twist_reduction >( pairs, boundary_matrix );
-	pairs.sort();
+		< phat::chunk_reduction >( pairs, boundary_matrix );
+	// pairs.sort();
 	cout << "\tComputed and sorted!\n";
 	
 	// post processing: add sm-ms pairs, set critical points
@@ -1319,6 +1391,14 @@ void Simplicial2Complex::write_presave(string presave){
 		PersistencePairs::write_ve_pair(*pp, pre_stream);
 	}
 	
+	if (DEBUG){
+		ofstream ppairs("PersistencePairs.txt", ios::binary);
+		for(auto pp = P.msBegin(); pp != P.msEnd(); ++pp){
+			PersistencePairs::write_ve_pair_debug(*pp, atV(pp->min)->getoriPosition(), ppairs);
+		}
+		ppairs.close();
+	}
+	
 	// write et pair
 	int num_et = P.smsize();
 	*int_writer = num_et;
@@ -1326,6 +1406,12 @@ void Simplicial2Complex::write_presave(string presave){
 
 	for(auto pp = P.smBegin(); pp != P.smEnd(); ++pp){
 		PersistencePairs::write_et_pair(*pp, pre_stream);
+	}
+	if (DEBUG){
+		ofstream ppairs("PersistencePairs.txt", ios::binary|ios::app);
+		for(auto pp = P.smBegin(); pp != P.smEnd(); ++pp){
+			PersistencePairs::write_et_pair_debug(*pp, pre_stream);
+		}
 	}
 	
 	pre_stream.close();

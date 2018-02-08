@@ -78,6 +78,8 @@ public:
 	static persistencePair12 read_et_pair(ifstream &presave);
 	static void write_ve_pair(persistencePair01, ofstream& presave);
 	static void write_et_pair(persistencePair12, ofstream& presave);
+	static void write_ve_pair_debug(persistencePair01, int, ofstream&);
+	static void write_et_pair_debug(persistencePair12, ofstream&);
 	
 	
 	vector<persistencePair01>::iterator msBegin(){
@@ -203,6 +205,15 @@ void PersistencePairs::write_et_pair(persistencePair12 pp, ofstream& presave){
 	delete int_buffer;
 	delete double_buffer;
 }
-	
 
+void PersistencePairs::write_ve_pair_debug(persistencePair01 pp, int ori, ofstream& ppair){
+	ppair << "1 " << pp.persistence << " " 
+		  << ori << " "
+		  << pp.saddle << "\n";
+}
 
+void PersistencePairs::write_et_pair_debug(persistencePair12 pp, ofstream& ppair){
+	ppair << "2 " << pp.persistence << " "
+		  << pp.saddle << " "
+		  << pp.max << "\n";
+}

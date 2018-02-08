@@ -9,7 +9,7 @@ Comments: Vertex index start from 1. All edges and triangles uses vertex index.
 */
 
 
-// g++ Triangulation.cpp -std=c++11 -I /home/wangsu/Develop/Neuro/DiademMetric/persistence/boost_1_59_0/ -o triangulate
+// g++ Triangulation.cpp -std=c++11 -static-libstdc++ -I ./boost_1_64_0/ -o triangulate
 
 
 #include<stdio.h>
@@ -66,9 +66,11 @@ struct tp{
 
 
 //	Tetrahedron pair: if need this, uncomment all lines with tetra
+/*
 struct tetra{
 	vector<int> p{-1, -1, -1, -1};
 };
+*/
 
 vector<point> vertex;
 vector<cp> edge;
@@ -77,193 +79,110 @@ vector<tp> triangle;
 // vector<tetra> tetrahedron;
 
 int vertcount = 1;
-vector<vector<vector<int> > > rev_idx;
-vector<vector<vector<bool> > > marked;
+//vector<vector<vector<int> > > rev_idx;
+//vector<vector<vector<bool> > > marked;
 
 // vector<vector<vector<double> > > MAP;
 // Density map stored in 3D array
-int HEIGHT, WIDTH, DEPTH, LENGTH;
+// int HEIGHT, WIDTH, DEPTH, LENGTH;
 
 
+// *********** begin vertex pair***********
+std::size_t hash_value(const point &pt){
+  std::size_t seed = 0;
+  boost::hash_combine(seed, pt.x);
+  boost::hash_combine(seed, pt.y);
+  boost::hash_combine(seed, pt.z);
+  return seed;
+}
 
-#if complexhash
-	class EdgeHash{
-		// Assume vertex are given in ascending order
-		private:
-			unordered_map<int, unordered_set<int>* >* v1;
-		
-		public:
-			EdgeHash(){
-				v1 = new unordered_map<int, unordered_set<int>* >();
-				v1->clear();
-			}
-			bool HasEdge(cp edge){
-				if(v1->count(edge.p1)==0){
-					return false;
-				}else{
-					unordered_set<int>* v2 = v1->at(edge.p1);
-					if (v2->count(edge.p2) == 0){
-						return false;
-					}else{
-						return true;
-					}
-				}
-			}
-			void InsertEdge(cp edge){
-				if (v1->count(edge.p1) > 0){
-					unordered_set<int>* v2 = v1->at(edge.p1);
-					v2->insert(edge.p2);
-				}else{
-					unordered_set<int>* v2 = new unordered_set<int>();
-					v2->insert(edge.p2);
-					std::pair<int, unordered_set<int>*> pair = std::make_pair(edge.p1, v2);
-					v1->insert(pair);
-				}
-			}
-	};
+bool operator==(const point &a, const point &b)
+{
+  return a.x == b.x && a.y == b.y && a.z == b.z;
+}
 
-	class TriangleHash{
-		// Assume vertex are given in ascending order
-		private:
-			unordered_map<int, EdgeHash* >* v1;
-		
-		public:
-			TriangleHash(){
-				v1 = new unordered_map<int, EdgeHash*>();
-				v1->clear();
-			}
-			bool HasTriangle(tp triangle){
-				if(v1->count(triangle.p1)==0){
-					return false;
-				}else{
-					EdgeHash* v2 = v1->at(triangle.p1);
-					cp edge;
-					edge.p1 = triangle.p2;
-					edge.p2 = triangle.p3;
-					if (v2->HasEdge(edge)){
-						return true;
-					}else{
-						return false;
-					}
-				}
-			}
-			void InsertTriangle(tp triangle){
-				if (v1->count(triangle.p1) > 0){
-					EdgeHash* v2 = v1->at(triangle.p1);
-					cp edge;
-					edge.p1 = triangle.p2;
-					edge.p2 = triangle.p3;
-				
-					v2->InsertEdge(edge);
-				}else{
-					EdgeHash* v2 = new EdgeHash();
-					cp edge;
-					edge.p1 = triangle.p2;
-					edge.p2 = triangle.p3;
-					v2->InsertEdge(edge);
-					std::pair<int, EdgeHash*> pair = std::make_pair(triangle.p1, v2);
-					v1->insert(pair);
-				}
-			}
-	};
-#else
-	// *********** begin vertex pair***********
-	std::size_t hash_value(const point &pt){
-	  std::size_t seed = 0;
-	  boost::hash_combine(seed, pt.x);
-	  boost::hash_combine(seed, pt.y);
-	  boost::hash_combine(seed, pt.z);
-	  return seed;
-	}
-
-	bool operator==(const point &a, const point &b)
-	{
-	  return a.x == b.x && a.y == b.y && a.z == b.z;
-	}
-
-	class VertexHash{
-		private:
-			boost::unordered_map<point, int> v_hash;
-		public:
-			VertexHash(){
-				v_hash.clear();
-			}
-			int GetIndex(point p){
-				if (v_hash.count(p) > 0)
-					return v_hash[p];
-				else
-					return -1;
-			}
-			void InsertVertex(point p, int n){
-				v_hash.insert(make_pair(p, n));
-			}
-			int size(){return v_hash.size();}
-			boost::unordered_map<point, int>::iterator begin(){
-				return v_hash.begin();
-			}
-			boost::unordered_map<point, int>::iterator end(){
-				return v_hash.end();
-			}
-	};
-	// *********** End of vertex pair ***********
+class VertexHash{
+    private:
+        boost::unordered_map<point, int> v_hash;
+    public:
+        VertexHash(){
+            v_hash.clear();
+        }
+        int GetIndex(point p){
+            if (v_hash.count(p) > 0)
+                return v_hash[p];
+            else
+                return -1;
+        }
+        void InsertVertex(point p, int n){
+            v_hash.insert(make_pair(p, n));
+        }
+        int size(){return v_hash.size();}
+        boost::unordered_map<point, int>::iterator begin(){
+            return v_hash.begin();
+        }
+        boost::unordered_map<point, int>::iterator end(){
+            return v_hash.end();
+        }
+};
+// *********** End of vertex pair ***********
 
 
-	std::size_t hash_value(const cp &e){
-	  std::size_t seed = 0;
-	  boost::hash_combine(seed, e.p1);
-	  boost::hash_combine(seed, e.p2);
-	  return seed;
-	}
-	bool operator==(const cp &a, const cp &b)
-	{
-	  return a.p1 == b.p1 && a.p2 == b.p2;
-	}
-	
-	class EdgeHash{
-		// Assume vertex are given in ascending order
-		private:
-			boost::unordered_set<cp> e_hash;
-		
-		public:
-			EdgeHash(){
-				e_hash.clear();
-			}
-			bool HasEdge(cp edge){
-				return e_hash.count(edge) > 0;
-			}
-			void InsertEdge(cp edge){
-				e_hash.insert(edge);
-			}
-	};
-	
-	std::size_t hash_value(const tp &t){
-	  std::size_t seed = 0;
-	  boost::hash_combine(seed, t.p1);
-	  boost::hash_combine(seed, t.p2);
-	  boost::hash_combine(seed, t.p3);
-	  return seed;
-	}
-	bool operator==(const tp &a, const tp &b)
-	{
-	  return a.p1 == b.p1 && a.p2 == b.p2 && a.p3 == b.p3;
-	}
+std::size_t hash_value(const cp &e){
+  std::size_t seed = 0;
+  boost::hash_combine(seed, e.p1);
+  boost::hash_combine(seed, e.p2);
+  return seed;
+}
+bool operator==(const cp &a, const cp &b)
+{
+  return a.p1 == b.p1 && a.p2 == b.p2;
+}
 
-	class TriangleHash{
-		// Assume vertex are given in ascending order
-		private:
-			boost::unordered_set<tp> t_hash;
-		public:
-			TriangleHash(){
-				t_hash.clear();
-			}
-			bool HasTriangle(tp triangle){
-				return t_hash.count(triangle) > 0;
-			}
-			void InsertTriangle(tp triangle){
-				t_hash.insert(triangle);
-			}
-	};
-#endif
+class EdgeHash{
+    // Assume vertex are given in ascending order
+    private:
+        boost::unordered_set<cp> e_hash;
+    
+    public:
+        EdgeHash(){
+            e_hash.clear();
+        }
+        bool HasEdge(cp edge){
+            return e_hash.count(edge) > 0;
+        }
+        void InsertEdge(cp edge){
+            e_hash.insert(edge);
+        }
+};
+
+std::size_t hash_value(const tp &t){
+  std::size_t seed = 0;
+  boost::hash_combine(seed, t.p1);
+  boost::hash_combine(seed, t.p2);
+  boost::hash_combine(seed, t.p3);
+  return seed;
+}
+bool operator==(const tp &a, const tp &b)
+{
+  return a.p1 == b.p1 && a.p2 == b.p2 && a.p3 == b.p3;
+}
+
+class TriangleHash{
+    // Assume vertex are given in ascending order
+    private:
+        boost::unordered_set<tp> t_hash;
+    public:
+        TriangleHash(){
+            t_hash.clear();
+        }
+        bool HasTriangle(tp triangle){
+            return t_hash.count(triangle) > 0;
+        }
+        void InsertTriangle(tp triangle){
+            t_hash.insert(triangle);
+        }
+};
 
 
 VertexHash vh;
@@ -281,33 +200,13 @@ void bin_init(string filename){
     	return;
     }
     
-    char* header_data = new char[sizeof(int) * 4];
+    char* header_data = new char[sizeof(int) * 1];
     
-    binaryIO.read(header_data, sizeof(int) * 4);
+    binaryIO.read(header_data, sizeof(int) * 1);
 	int* header_value = (int*) header_data;
-	HEIGHT = header_value[0];
-	WIDTH = header_value[1];
-	DEPTH = header_value[2];
-	LENGTH = header_value[3];
+	int LENGTH = header_value[0];
 
-    printf("Preparing rev-index matrix %d-%d-%d\n", HEIGHT, WIDTH, DEPTH);
-	
-    rev_idx.clear();
-    marked.clear();	
-    for (int i = 0; i < HEIGHT; ++i) {
-        // DIM 2
-        vector<vector<int> > tmp2di;
-        vector<vector<bool> > tmp2db;
-        rev_idx.push_back(tmp2di);
-        marked.push_back(tmp2db);
-        for (int j = 0; j < WIDTH; ++j){
-            // DIM 3
-            rev_idx[i].push_back(vector<int>(DEPTH, 0));
-            marked[i].push_back(vector<bool>(DEPTH, 0));
-        }
-    }
-
-    printf("Reading density matrix: total %d Lines\n", LENGTH);
+    printf("Reading 3D density matrix: total %d Lines\n", LENGTH);
     char* density_data = new char[sizeof(double) * 4];
     double* density_value = (double*) density_data;
     for (int len = 0; len < LENGTH; ++len){
@@ -322,11 +221,15 @@ void bin_init(string filename){
 		k = floor(density_value[2] + 0.5);
         v = density_value[3];
 
-        i--;j--;k--;
-        rev_idx[i][j][k] = vertcount++;
         point p;
         p.x = i; p.y = j; p.z = k; p.v = v;
-        vertex.push_back(p);
+        int idx = -1;
+        idx = vh.GetIndex(p);
+        if (idx < 0){   // if there are duplicated points, keep the first one.
+	        vertex.push_back(p);
+	        vh.InsertVertex(p, vertcount);
+	        vertcount++;
+	    }
     }
     binaryIO.close();
     printf("done\n");
@@ -351,54 +254,46 @@ int triangle_cube(int i, int j, int k, int AB){
                           {1,1,0}, {1,0,1}, {0,1,1},
                           {0,0,0}, {1,1,0}, {0,1,1}
                    };
-		int flag = 1;
         for (int cnt = 0; cnt < nb; cnt++){
-            if ((i + TypeAtri[cnt*3][0]>=HEIGHT)||
-                (i + TypeAtri[cnt*3+1][0]>=HEIGHT)||
-                (i + TypeAtri[cnt*3+2][0]>=HEIGHT)||
-                (j + TypeAtri[cnt*3][1]>=WIDTH)||
-                (j + TypeAtri[cnt*3+1][1]>=WIDTH)||
-                (j + TypeAtri[cnt*3+2][1]>=WIDTH)||
-                (k + TypeAtri[cnt*3][2]>=DEPTH)||
-                (k + TypeAtri[cnt*3+1][2]>=DEPTH)||
-                (k + TypeAtri[cnt*3+2][2]>=DEPTH)){
-                    flag = 0;
-                    continue;
-               }
-
             int sub1, sub2, sub3;
-            if (rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]] <= 0){
-                rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]] = vertcount++;
-                point p;
-                p.x = i+TypeAtri[cnt*3][0]; p.y = j+TypeAtri[cnt*3][1]; p.z = k+TypeAtri[cnt*3][2]; p.v = 1e-6;
+            
+            point p;
+            p.x = i + TypeAtri[cnt*3][0];
+            p.y = j + TypeAtri[cnt*3][1];
+            p.z = k + TypeAtri[cnt*3][2];
+            sub1 = vh.GetIndex(p);
+            if (sub1 < 0){
+            	p.v = 1e-6;
+                vh.InsertVertex(p, vertcount);
+                sub1 = vertcount;
+                vertcount++;
                 vertex.push_back(p);
-                sub1 = rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]];
             }
-            else{
-                sub1 = rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]];
+            
+            p.x = i + TypeAtri[cnt*3+1][0];
+            p.y = j + TypeAtri[cnt*3+1][1];
+            p.z = k + TypeAtri[cnt*3+1][2];
+			sub2 = vh.GetIndex(p);
+            if (sub2 < 0){
+                p.v = 1e-6;
+                vh.InsertVertex(p, vertcount);
+                sub2 = vertcount;
+              	vertcount++;
+                vertex.push_back(p);
+            }
+            
+            p.x = i + TypeAtri[cnt*3+2][0];
+            p.y = j + TypeAtri[cnt*3+2][1];
+            p.z = k + TypeAtri[cnt*3+2][2];
+			sub3 = vh.GetIndex(p);
+            if (sub3 < 0){
+                p.v = 1e-6;
+                vh.InsertVertex(p, vertcount);
+                sub3 = vertcount;
+                vertcount++;
+                vertex.push_back(p);
             }
 
-            if (rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]] <= 0){
-                rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]] = vertcount++;
-                point p;
-                p.x = i+TypeAtri[cnt*3+1][0]; p.y = j+TypeAtri[cnt*3+1][1]; p.z = k+TypeAtri[cnt*3+1][2]; p.v = 1e-6;
-                vertex.push_back(p);
-                sub2 = rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]];
-            }
-            else{
-                sub2 = rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]];
-            }
-
-            if (rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]]<=0){
-                rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]] = vertcount++;
-                point p;
-                p.x = i+TypeAtri[cnt*3+2][0]; p.y = j+TypeAtri[cnt*3+2][1]; p.z = k+TypeAtri[cnt*3+2][2]; p.v = 1e-6;
-                vertex.push_back(p);
-                sub3 = rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]];
-            }
-            else{
-                sub3 = rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]];
-            }
             tp new_triangle;
             new_triangle.p1 = sub1; new_triangle.p2 = sub2; new_triangle.p3 = sub3;
 			new_triangle.Reorder();
@@ -434,24 +329,6 @@ int triangle_cube(int i, int j, int k, int AB){
 				eh.InsertEdge(new_edge3);
 			}
         }
-        
-        /*
-        int Type4D[4 * 5][3] = {{0,0,0}, {0,0,1}, {1,0,1}, {0,1,1},
-        						{0,0,0}, {1,0,0}, {1,0,1}, {1,1,0},
-        						{0,1,1}, {0,0,0}, {1,1,0}, {0,1,0},
-        						{0,1,1}, {1,0,1}, {1,1,0}, {1,1,1},
-        						{0,1,1}, {1,0,1}, {1,1,0}, {0,0,0}
-        						};
-        for (int cnt = 0; cnt < 5; ++cnt){
-        	if (!flag) break;
-        	tetra tmp;
-        	for (int vert_id = 0; vert_id < 4; ++vert_id){
-        		tmp.p[vert_id] = rev_idx[i + Type4D[cnt * 4 + vert_id][0]]
-        								[j + Type4D[cnt * 4 + vert_id][1]]
-        								[k + Type4D[cnt * 4 + vert_id][2]];
-        	}
-        	tetrahedron.push_back(tmp);
-        }*/
     }
     else{// 10 triangles of Type B
         int TypeAtri[3*16][3] = {{0,0,0}, {0,0,1}, {0,1,0},
@@ -471,59 +348,50 @@ int triangle_cube(int i, int j, int k, int AB){
                                {0,0,1}, {1,1,1}, {1,0,0},
                                {0,0,1}, {1,1,1}, {0,1,0}
                                };
-		int flag = 1;
-        for (int cnt = 0; cnt<nb; cnt++){
-            if ((i + TypeAtri[cnt*3][0]>=HEIGHT)||
-                (i + TypeAtri[cnt*3+1][0]>=HEIGHT)||
-                (i + TypeAtri[cnt*3+2][0]>=HEIGHT)||
-                (j + TypeAtri[cnt*3][1]>=WIDTH)||
-                (j + TypeAtri[cnt*3+1][1]>=WIDTH)||
-                (j + TypeAtri[cnt*3+2][1]>=WIDTH)||
-                (k + TypeAtri[cnt*3][2]>=DEPTH)||
-                (k + TypeAtri[cnt*3+1][2]>=DEPTH)||
-                (k + TypeAtri[cnt*3+2][2]>=DEPTH)){
-                    flag = 0;
-               	    continue;
-               }
-                
-                
+        for (int cnt = 0; cnt < nb; cnt++){
             int sub1, sub2, sub3;
-            if (rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]] <= 0){
-                rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]] = vertcount++;
-                point p;
-                p.x = i+TypeAtri[cnt*3][0]; p.y = j+TypeAtri[cnt*3][1]; p.z = k+TypeAtri[cnt*3][2]; p.v = 1e-6;
+            
+            point p;
+            p.x = i + TypeAtri[cnt*3][0];
+            p.y = j + TypeAtri[cnt*3][1];
+            p.z = k + TypeAtri[cnt*3][2];
+            sub1 = vh.GetIndex(p);
+            if (sub1 < 0){
+            	p.v = 1e-6;
+                vh.InsertVertex(p, vertcount);
+                sub1 = vertcount;
+                vertcount++;
                 vertex.push_back(p);
-                sub1 = rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]];
             }
-            else{
-                sub1 = rev_idx[i + TypeAtri[cnt*3][0]][j + TypeAtri[cnt*3][1]][k + TypeAtri[cnt*3][2]];
+            
+            p.x = i + TypeAtri[cnt*3+1][0];
+            p.y = j + TypeAtri[cnt*3+1][1];
+            p.z = k + TypeAtri[cnt*3+1][2];
+			sub2 = vh.GetIndex(p);
+            if (sub2 < 0){
+                p.v = 1e-6;
+                vh.InsertVertex(p, vertcount);
+                sub2 = vertcount;
+              	vertcount++;
+                vertex.push_back(p);
+            }
+            
+            p.x = i + TypeAtri[cnt*3+2][0];
+            p.y = j + TypeAtri[cnt*3+2][1];
+            p.z = k + TypeAtri[cnt*3+2][2];
+			sub3 = vh.GetIndex(p);
+            if (sub3 < 0){
+                p.v = 1e-6;
+                vh.InsertVertex(p, vertcount);
+                sub3 = vertcount;
+                vertcount++;
+                vertex.push_back(p);
             }
 
-            if (rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]] <= 0){
-                rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]] = vertcount++;
-                point p;
-                p.x = i+TypeAtri[cnt*3+1][0]; p.y = j+TypeAtri[cnt*3+1][1]; p.z = k+TypeAtri[cnt*3+1][2]; p.v = 1e-6;
-                vertex.push_back(p);
-                sub2 = rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]];
-            }
-            else{
-                sub2 = rev_idx[i + TypeAtri[cnt*3+1][0]][j + TypeAtri[cnt*3+1][1]][k + TypeAtri[cnt*3+1][2]];
-            }
-
-            if (rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]]<=0){
-                rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]] = vertcount++;
-                point p;
-                p.x = i+TypeAtri[cnt*3+2][0]; p.y = j+TypeAtri[cnt*3+2][1]; p.z = k+TypeAtri[cnt*3+2][2]; p.v = 1e-6;
-                vertex.push_back(p);
-                sub3 = rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]];
-            }
-            else{
-                sub3 = rev_idx[i + TypeAtri[cnt*3+2][0]][j + TypeAtri[cnt*3+2][1]][k + TypeAtri[cnt*3+2][2]];
-            }
             tp new_triangle;
             new_triangle.p1 = sub1; new_triangle.p2 = sub2; new_triangle.p3 = sub3;
 			new_triangle.Reorder();
-            if (!th.HasTriangle(new_triangle)){
+			if (!th.HasTriangle(new_triangle)){
 				triangle.push_back(new_triangle);
 				th.InsertTriangle(new_triangle);
 			}
@@ -542,7 +410,6 @@ int triangle_cube(int i, int j, int k, int AB){
                 printf("%d %d %d\n", sub1, sub2, sub3);
             }
 
-
             if (!eh.HasEdge(new_edge1)){
 				edge.push_back(new_edge1);
 				eh.InsertEdge(new_edge1);
@@ -556,24 +423,6 @@ int triangle_cube(int i, int j, int k, int AB){
 				eh.InsertEdge(new_edge3);
 			}
         }
-        
-        /*
-        int Type4D[4 * 5][3] = {{0,0,0}, {1,0,0}, {0,1,0}, {0,0,1},
-        						{0,1,0}, {1,0,0}, {1,1,0}, {1,1,1},
-        						{0,1,0}, {1,1,1}, {0,0,1}, {0,1,1},
-        						{0,0,1}, {1,0,1}, {1,1,1}, {1,0,0},
-        						{0,0,1}, {1,1,1}, {0,1,0}, {1,0,0}
-        						};
-        for (int cnt = 0; cnt < 5; ++cnt){
-        	if (!flag) break;
-        	tetra tmp;
-        	for (int vert_id = 0; vert_id < 4; ++vert_id){
-        		tmp.p[vert_id] = rev_idx[i + Type4D[cnt * 4 + vert_id][0]]
-        								[j + Type4D[cnt * 4 + vert_id][1]]
-        								[k + Type4D[cnt * 4 + vert_id][2]];
-        	}
-        	tetrahedron.push_back(tmp);
-        }*/
     }
     return 0;
 }
@@ -635,7 +484,7 @@ int triangulation_with_vertex(){
 			cout << "skipped something\n";
 			continue;
 		}
-		marked[i][j][k] = 1;
+
 		if ((i+j+k)%2==1){
 			triangle_cube(i, j, k, 0);
 		}
@@ -812,7 +661,7 @@ void init_2D(string filename){
     
     binaryIO.read(header_data, sizeof(int) * 1);
 	int* header_value = (int*) header_data;
-	LENGTH = header_value[0];
+	int LENGTH = header_value[0];
 
 	cout << *header_value << endl;
     printf("Reading 2D density matrix: total %d Lines\n", LENGTH);

@@ -2,7 +2,7 @@
 Merge result
 Author: Suyi Wang
 
-Input: xxx_vert.txt xxx_edge.txt
+Input: merge_settings.ini xxx_vert.txt xxx_edge.txt
 Output: binary file
 
 Comments: Vertex index start from 1. All edges and triangles uses vertex index.
@@ -11,7 +11,8 @@ so diffusing is simplified.
 */
 
 
-// g++ merge_graph.cpp -std=c++11 -I /home/wangsu/Develop/Neuro/DiademMetric/persistence/boost_1_59_0/ -o merge_graph_exe
+// g++ merge_graph.cpp -std=c++11 -I boost_1_64_0/ -o merge_graph_exe
+// g++ merge_graph.cpp -O3 -std=c++11 -I C:/virtualE/Develop/boost_1_63_0/ -o merge_graph
 
 
 #include<stdio.h>
@@ -260,7 +261,7 @@ int triangle_cube(int i, int j, int k, int AB){
 			new_edge3.Reorder();
 
             if (DEBUG){
-                printf("%d %d %d\n", sub1, sub2, sub3);
+                printf("\t%d %d %d\n", sub1, sub2, sub3);
             }
 
             if (!eh.HasEdge(new_edge1)){
@@ -349,7 +350,7 @@ int triangle_cube(int i, int j, int k, int AB){
 			new_edge3.Reorder();
 
             if (DEBUG){
-                printf("%d %d %d\n", sub1, sub2, sub3);
+                printf("\t%d %d %d\n", sub1, sub2, sub3);
             }
 
             if (!eh.HasEdge(new_edge1)){
@@ -415,8 +416,21 @@ bool in_range(point p, vector<int> &bbox){
 	}
 }
 
+void update_bbox(vector<double> &vb, bool &first, point p){
+	if (first){
+		first = 0;
+		vb[0] = p.x; vb[1] = p.x;
+		vb[2] = p.y; vb[3] = p.y;
+		vb[4] = p.z; vb[5] = p.z;
+	}else{
+		vb[0] = p.x < vb[0]?p.x:vb[0]; vb[1] = p.x > vb[1]?p.x:vb[1];
+                vb[2] = p.y < vb[2]?p.y:vb[2]; vb[3] = p.y > vb[3]?p.y:vb[3];
+                vb[4] = p.z < vb[4]?p.z:vb[4]; vb[5] = p.z > vb[5]?p.z:vb[5];
+	}
+}
 
-void ProcessGraph(string filename, vector<int> bbox){
+
+void ProcessGraph(string filename, vector<int> bbox, bool degreed, bool swp){
 	string vert_name = filename + "_vert.txt";
 	string edge_name = filename + "_edge.txt";
 	
@@ -428,21 +442,39 @@ void ProcessGraph(string filename, vector<int> bbox){
 	double x, y, z, v;
 	int nl;
 	graph_vert.clear();
-
-	while(fscanf(fp, "%lf%lf%lf%lf%d", &x, &y, &z, &v, &nl) != EOF){
-		point p;
-		p.x = x; p.y = y; p.z = z; p.v = v;
-		graph_vert.push_back(p);  // + 1 or not
+	bool first = 1;
+	vector<double> vertexbound(6, 0);
+	
+	if (!degreed){
+		while(fscanf(fp, "%lf%lf%lf%lf%d", &x, &y, &z, &v, &nl) != EOF){
+			point p;
+			p.x = x; p.y = y; p.z = z; p.v = v;
+			if (swp) swap(p.x, p.y);
+			graph_vert.push_back(p);  // + 1 or not
+			update_bbox(vertexbound, first, p);
+		}
+	}else{
+		int deg;
+		while(fscanf(fp, "%lf%lf%lf%lf%d%d", &x, &y, &z, &v, &nl, &deg) != EOF){
+			point p;
+			p.x = x; p.y = y; p.z = z; p.v = v;
+			if (swp) swap(p.x, p.y);
+			graph_vert.push_back(p);  // + 1 or not
+			update_bbox(vertexbound, first, p);
+		}
 	}
 	fclose(fp);
-	printf("Read %d vertices\n", graph_vert.size());
+	printf("\tRead %d vertices\n \tbounded in:", graph_vert.size());
+	for(int i =0; i< 6; i++) printf("\t%.0f ", vertexbound[i]);
+	printf("\n");
 	
 	
 	fp = fopen(edge_name.c_str(), "r");
 	int e1, e2;
 	int counter = 0;
 	int c_interior = 0;
-	while(fscanf(fp, "%d%d%d", &e1, &e2, &nl) != EOF){
+	double persist;
+	while(fscanf(fp, "%d%d%d%lf", &e1, &e2, &nl,&persist) != EOF){
 		e1--;e2--;
 		if (in_range(graph_vert[e1], bbox) && in_range(graph_vert[e2], bbox)){
 			// only insert a point.
@@ -483,23 +515,24 @@ void ProcessGraph(string filename, vector<int> bbox){
 		else{
 			if (!in_range(graph_vert[e1], bbox)){
 				diffuse(graph_vert[e1]);
+				counter ++;
 			}
 			if (!in_range(graph_vert[e2], bbox)){
 				diffuse(graph_vert[e2]);
+				counter ++;
 			}
-			counter ++;
 		}
 	}
 	fclose(fp);
-	printf("processed %d interior edges, %d diffused points\n", c_interior, counter, vh.size());
+	printf("\tprocessed %d interior edges, %d diffused points\n", c_interior, counter, vh.size());
 	
-    printf("done\n");
+    printf("\tdone\n");
 }
 
 
 void bin_output(){
     ofstream ofs("vert.bin",ios::binary);
-    printf("writing %d vertex\n", vertex.size());
+    printf("\twriting %d vertex\n", vertex.size());
     char* vert = new char[sizeof(double) * 4];
     double* vert_buffer = (double*) vert;
     for (int i = 0; i < vertex.size(); i++){
@@ -510,7 +543,7 @@ void bin_output(){
     ofs.close();
 
 	ofs.open("edge.bin", ios::binary);
-    printf("writing %d edge\n", edge.size());
+    printf("\twriting %d edge\n", edge.size());
     char* edgechar = new char[sizeof(int) * 2];
     int* edge_buffer = (int*) edgechar;
     for (int i = 0; i < edge.size(); i++){
@@ -520,7 +553,7 @@ void bin_output(){
     ofs.close();
 
     ofs.open("triangle.bin", ios::binary);
-    printf("writing %d triangle\n", triangle.size());
+    printf("\twriting %d triangle\n", triangle.size());
     char* trianglechar = new char[sizeof(int) * 3];
     int* triangle_buffer = (int*) trianglechar;
     for (int i = 0; i < triangle.size(); i++){
@@ -576,21 +609,64 @@ int Triangulate(){
 		}
 	}
     
-    printf("Skipped %d points\n", skip_count);
+    printf("\tSkipped %d points\n", skip_count);
     return 0;
 }
 
 
 void init_trans(string trans_file){
 	FILE* fp = fopen(trans_file.c_str(), "r");
+	if (fp == NULL){
+		cout << trans_file << "cannot be opened." << endl;
+	}
 	int xlen;
+	int counter = 0;
+	int totnum = 0;
+	// fscanf(fp, "%d", &totnum);
 	while(fscanf(fp, "%d", &xlen)!=EOF){
 		trans_info.push_back(xlen);
+		counter++;
+		if (counter % 3 == 0 )
+			trans_info.push_back(0);
 	}
 	// should be dividable by 4
 	fclose(fp);
 }
 
+void init_settings(string setting_name, vector<double> &bboundary, 
+				vector<int> &filelist, bool &degreed){
+	FILE* fp = fopen(setting_name.c_str(), "r");
+	if (fp == NULL){
+		cout << "Failed to open setting file" + setting_name << endl;
+	}
+	// Reading boundary box.
+	for(int i = 0; i < 6; ++i){
+		double bound;
+		fscanf(fp, "%lf", &bound);
+		bboundary.push_back(bound);
+	}
+	
+	int tmp;
+	fscanf(fp, "%d", &tmp);
+	if (tmp == 1){
+		degreed = true;
+	}else degreed = false;
+	
+	// Reading file list
+	int filenum;
+	while(fscanf(fp, "%d", &filenum)!=EOF){
+		filelist.push_back(filenum);
+	}
+	fclose(fp);
+}
+
+// For MinGW only
+std::string to_string(int i)
+{
+    std::stringstream ss;
+    ss << i;
+    return ss.str();
+}
 
 int main(int argc, char* argv[])
 {
@@ -598,65 +674,73 @@ int main(int argc, char* argv[])
 	// format: s_#_vert.txt
 	// merge_graph_exe <prefix> <trans_matrix> <max_file_num>
 	string prefix;
+	string setting_name;
 	string trans;
-	int max_file;
+	bool degreed;
+	vector<double> bboundary;
+	vector<int> filelist;
 	if (argc == 4){
 		prefix = string(argv[1]);
 		trans = string(argv[2]);
-		max_file = atoi(argv[3]);
+		setting_name = string(argv[3]);
 		nb = 12;
 	}
 	else {
-		cout << "usage: merge_graph <dataset_name> <trans_matrix> <max_filecount>\n";
+		cout << "usage: merge_graph <prefix_file> <trans> <setting_file>";
 		return 0;
 	}
+	/*******************************
+	Setting file format
+	<bounding box> 6 integers
+	<# of files>
+	[file number]
+	********************************/
 	
 	trans_info.clear();
+	// Read settings.ini
+	// need boundary, start_file end_file
 	init_trans(trans);
+	init_settings(setting_name, bboundary, filelist, degreed);
 	
 	vertex.clear(); edge.clear(); triangle.clear();
 	norm_const = kernel_init(0.5);
 	cout << "Normalize factor: " << norm_const << endl;
 
 	vector<int> bbox;
-	for(int i = 0; i < max_file; i++){
-		string filename = prefix + to_string(i);
+	for(int i = 0; i < filelist.size(); i++){
+		string filename = prefix + to_string(filelist[i]);
 		printf("Processing Graph %s...\n", filename.c_str());
 		
 		bbox.clear();
 		int lz;
-		int j = i-1;
+		int j = filelist[i];
 		lz = trans_info[j*4 + 3];
-		
 
-		// for NeuroMuscular and Neocortical
-		// This part is still hard coded.
-		
-		int xmin = trans_info[j*4] + 512/50.0;		bbox.push_back(xmin);
-		int xmax = trans_info[j*4] + 512*0.98;		bbox.push_back(xmax);
-		int ymin = trans_info[j*4 + 1] + 512/50.0;	bbox.push_back(ymin);
-		int ymax = trans_info[j*4 + 1] + 512*0.98;	bbox.push_back(ymax);
-		int zmin = trans_info[j*4 + 2] + 0;		bbox.push_back(zmin);
-		int zmax = trans_info[j*4 + 2] + 300;		bbox.push_back(zmax);
-		
-
-		// for OP
+		// setting up bounding box for the dataset.
 		/*
 		int xmin = trans_info[j*4] + 5;		bbox.push_back(xmin);
-		int xmax = trans_info[j*4] + 261 - 5;		bbox.push_back(xmax);
+		int xmax = trans_info[j*4] + 517 - 5;		bbox.push_back(xmax);
 		int ymin = trans_info[j*4 + 1] + 5;	bbox.push_back(ymin);
-		int ymax = trans_info[j*4 + 1] + 261 - 5;	bbox.push_back(ymax);
+		int ymax = trans_info[j*4 + 1] + 517 - 5;	bbox.push_back(ymax);
 		int zmin = trans_info[j*4 + 2] + 0;		bbox.push_back(zmin);
-		int zmax = trans_info[j*4 + 2] + 200;		bbox.push_back(zmax);
+		int zmax = trans_info[j*4 + 2] + 500;		bbox.push_back(zmax);
 		*/
+		int xmin = trans_info[j*4] + bboundary[0];		bbox.push_back(xmin);
+		int xmax = trans_info[j*4] + bboundary[1];		bbox.push_back(xmax);
+		int ymin = trans_info[j*4 + 1] + bboundary[2];		bbox.push_back(ymin);
+		int ymax = trans_info[j*4 + 1] + bboundary[3];		bbox.push_back(ymax);
+		int zmin = trans_info[j*4 + 2] + bboundary[4];		bbox.push_back(zmin);
+		int zmax = trans_info[j*4 + 2] + bboundary[5];		bbox.push_back(zmax);
+		
 
+		cout << "\tinterior box:";
+		for(auto &x : bbox){
+			cout << x << " ";
+		}
+		cout << endl;
 		
-			for(auto &x : bbox){
-				cout << x << " ";
-			}
-			cout << endl;
-		
-		ProcessGraph(filename, bbox);
+		ProcessGraph(filename, bbox, degreed, 1);
+		// 1 means swap x y coordinate
 	}
 	
 	Triangulate();

@@ -1,3 +1,5 @@
+#include<cmath>
+
 class Simplex;
 class Triangle;
 class Edge;
@@ -46,6 +48,9 @@ public:
 		}
 	    ofs << funcValue << " " << vPosition << "/" << oriPosition << " " << dim <<"\n";
 	}
+    double getcoord(int i){
+        return coords[i];
+    }
 	// deprecated functions
 };
 
@@ -83,6 +88,18 @@ public:
 	}
 	double getEval() {return eval;}
 	void setEval(double v) {eval = v;}
+    double Grad(){
+        Vertex* v0, *v1;
+        v0 = vp[0]; v1 = vp[1];
+        double fdiff = fabs(v0->funcValue - v1->funcValue);
+        double len = 0;
+        for(int i = 0; i<DIM; ++i){
+            len += (v0->getcoord(i) - v1->getcoord(i)) * (v0->getcoord(i) - v1->getcoord(i));
+        }
+        len = sqrt(len);
+        if (len < EPS_compare) cout << "Error Caught Duplicate point. Divided by zero\n";
+        return fdiff/len;
+    }
 	// Deprecated functions
 };
 
