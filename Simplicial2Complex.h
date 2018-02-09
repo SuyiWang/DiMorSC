@@ -1,3 +1,8 @@
+/*
+Pipeline controller.
+Organizes simplicial complex/dicrete gradient vector field/persistence pairs
+*/
+
 #include <unordered_set>
 #include <set>
 #include <stack>
@@ -9,9 +14,8 @@
 
 using namespace std;
 
+
 class Simplicial2Complex;
-
-
 class Simplicial2Complex{
 	// Connectivity info
 	// access these by index - which works as pointer
@@ -275,6 +279,8 @@ int Simplicial2Complex::order(){
 	return vertexList.size() + edgeList.size() + triList.size();
 }
 
+
+//  Output 1-stable manifold
 void Simplicial2Complex::outputArcs(string vertexFile, string edgeFile, double et_delta){
 	ofstream vFile(vertexFile);
 	ofstream eFile(edgeFile);
@@ -370,6 +376,8 @@ void Simplicial2Complex::outputArcs(string vertexFile, string edgeFile, double e
 	}
 }
 
+
+//  Load input data
 void Simplicial2Complex::buildComplexFromFile2_BIN(string pathname) {
 	// Input filename
 	ifstream file(pathname, ios::binary);
@@ -378,6 +386,7 @@ void Simplicial2Complex::buildComplexFromFile2_BIN(string pathname) {
 	int* int_reader = (int*) int_buffer;
 	char* double_buffer = new char[sizeof(double)];
 	double* double_reader = (double*) double_buffer;
+	
 	
 	// Read vertices.
 	int numOfVertices;
@@ -403,6 +412,7 @@ void Simplicial2Complex::buildComplexFromFile2_BIN(string pathname) {
 		addCriticalPoint((Simplex*) atV(i));
 	}
 	
+	
 	// Use flipped function --- maxma -> minima
 	// So we can look at vertex-edge pair
 	// function value is flipped back before final output.
@@ -423,6 +433,7 @@ void Simplicial2Complex::buildComplexFromFile2_BIN(string pathname) {
 		v2e.push_back(adj_v);
 	}
 	cout << "\tDone" << endl;
+	
 	
 	// Read edges.
 	int numOfEdges;
@@ -458,6 +469,7 @@ void Simplicial2Complex::buildComplexFromFile2_BIN(string pathname) {
 	}
 	cout << "\tDone" << endl;
 	
+	
 	// Read triangles.
 	int numOfTris;
 	file.read(int_buffer, sizeof(int));
@@ -484,9 +496,12 @@ void Simplicial2Complex::buildComplexFromFile2_BIN(string pathname) {
 	for (int i = 0; i < numOfTris; i++) {
 		addCriticalPoint((Simplex*) atT(i));
 	}
+	
+	
 	// at this point, edges triangles ues index in vertexList.
 	delete int_buffer;
 	delete double_buffer;
+	
 	
 	// Debug output stream - output all simplex information in ASCII
 	if (DEBUG){
@@ -879,6 +894,9 @@ void Simplicial2Complex::PhatPersistence(){
 	// generate boundary matrix
 	cout << "\tInitializing boundary matrix...\n";
 	cout << "\t\tMatrix size: " << this->filtration.size() << "\n";
+	
+	
+	//  Now uses the most efficient data structure in PHAT
 	phat::boundary_matrix< phat::bit_tree_pivot_column > boundary_matrix;
 	boundary_matrix.set_num_cols(this->filtration.size());
 	
@@ -940,6 +958,8 @@ void Simplicial2Complex::PhatPersistence(){
 	The "chunk" algorithm presented in [4]
 	The "spectral sequence" algorithm (see [1], p.166)
 	*/
+	
+	//  chunk & twist is better
 	phat::persistence_pairs pairs;
 	phat::compute_persistence_pairs\
 		< phat::chunk_reduction >( pairs, boundary_matrix );

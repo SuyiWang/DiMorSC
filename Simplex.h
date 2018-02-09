@@ -1,9 +1,16 @@
+/*
+Maintains simplicial complex
+Use vertex/edge/triangle lists that explicitly stores pointers of neighbours
+*/
+
 #include<cmath>
+
 
 class Simplex;
 class Triangle;
 class Edge;
 class Vertex;
+
 
 class Simplex{
 public:
@@ -88,6 +95,8 @@ public:
 	}
 	double getEval() {return eval;}
 	void setEval(double v) {eval = v;}
+	
+	//  Sort edge by gradient instead of vertex density
     double Grad(){
         Vertex* v0, *v1;
         v0 = vp[0]; v1 = vp[1];

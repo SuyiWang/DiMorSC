@@ -2,7 +2,7 @@
 #include <list>
 #include <stack>
 
-
+// PHAT dependencies
 #include <phat/compute_persistence_pairs.h>
 #include <phat/representations/vector_vector.h>
 #include <phat/representations/vector_heap.h>
@@ -21,8 +21,11 @@
 
 #include <phat/helpers/dualize.h>
 
+
 using namespace std;
 
+
+//  This stores a vertex edge pair
 typedef struct {
 	// here, use index in sorted_vertex!!!
 	// because we need the sorted vertex info for persistence pair sorting.
@@ -31,6 +34,10 @@ typedef struct {
 	double persistence;
 	int loc_diff;
 }persistencePair01;
+
+
+
+//  This stores an edge triangle pair
 typedef struct {
 	int saddle;
 	int max;
@@ -38,6 +45,8 @@ typedef struct {
 	int loc_diff;
 }persistencePair12;
 
+
+//  Container of all pairs
 class PersistencePairs{
 	/*ms: min-saddle or 0-1
 	  sm: saddle-max or 1-2*/
@@ -50,6 +59,9 @@ public:
 		msPersistencePairs.clear();
 		smPersistencePairs.clear();
 	}
+	
+	
+	//  Compares v-e pair
 	static bool persistencePairCompare01(const persistencePair01& p, const persistencePair01& q){
 		if(p.persistence < q.persistence - EPS_compare){
 			return true;
@@ -67,13 +79,15 @@ public:
 		}
 	}
 	
+	//  Compares e-t pair
 	static bool nzf_compare(const persistencePair12 &a, const persistencePair12 &b){
 		if(a.persistence < b.persistence){
 			return true;
 		}else return false;
 	}
 	
-	// data r/w
+	
+	//  data r/w interface
 	static persistencePair01 read_ve_pair(ifstream &presave);
 	static persistencePair12 read_et_pair(ifstream &presave);
 	static void write_ve_pair(persistencePair01, ofstream& presave);
@@ -82,6 +96,7 @@ public:
 	static void write_et_pair_debug(persistencePair12, ofstream&);
 	
 	
+	//  iterators
 	vector<persistencePair01>::iterator msBegin(){
 		return msPersistencePairs.begin();
 	}

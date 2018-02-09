@@ -1,17 +1,21 @@
 /*
-The software DiMoSC computes 1-stable manifold in arbitrary dimension
-from function defined on 2-dimensional simplicial complex.
+The software DiMoSC computes 1-stable manifold in arbitrary dimension from function defined on 2-dimensional simplicial complex.
+
 
 Dependency:
-PHAT, C++11, openMP
+	PHAT, C++11, openMP
 
+	
 Compile:
-// g++ DiMoSC.cpp -O3 -I./phat/include -openMP -std=c++11 -o DiMoSC -w
-// Debug switch - slower but output more information
+	// g++ DiMoSC.cpp -O3 -I./phat/include -openMP -std=c++11 -o DiMoSC -w
+	// Debug switch - slower but output more information
 
+	
 Execute command:
-./DiMorSC <input_file> <output_prefix> <persistence_threshold> <DIM> [saved_persis_pair]
+	./DiMorSC <input_file> <output_prefix> <persistence_threshold> <DIM> [saved_persis_pair]
 
+	
+Parameters:
 	// argv[1] - BIN file, format specified below.
 	// argv[2] - Prefix of output files
 	// argv[3] - Persistence threshold for simplification
@@ -20,7 +24,9 @@ Execute command:
 				 computed persistence pairing.
 	// argv[6] - reserved.
 
-The input file is composed of six blocks with the follow meaning:
+	
+Input specification:
+	The input file is composed of six blocks with the follow meaning:
 	<1. num_vertices>
 	<2. vertex list>
 	<3. num_edges>
@@ -45,8 +51,9 @@ The input file is composed of six blocks with the follow meaning:
 The output are two ascii files <output_prefix>_vert.txt, [output_prefix]_edge.txt.
 See example for more input and output details.
 
-Assumption: Number of simplices would not be more than MAX_INT / 3.
-If it exceed the maximum allowed numnber, please use split and merge algorithm.
+Additional Assumption: 
+	Number of simplices would not be more than MAX_INT / 3.
+	If it exceed the maximum allowed numnber, please use split and merge algorithm.
 
 */
 

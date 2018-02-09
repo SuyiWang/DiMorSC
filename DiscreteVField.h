@@ -1,3 +1,13 @@
+/*
+Definition of discrete gradient vector field.
+Interfaces:
+	containsVE
+	containsET
+	addVE
+	addET
+All instances are maintained by their index.
+*/
+
 class DiscreteVField;
 class DiscreteVField{
 private:

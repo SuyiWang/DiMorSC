@@ -1,18 +1,52 @@
-g++ densityRips.cpp -I./phat/include -std=c++11 -o density3D
-g++ densityRips.cpp -I./phat/include -std=c++11 -o density3D -w
+================= DiMorSC usage =============================
 
-# the last parameter 20 is the persistence threshold
-./density3D Allen.txt output_vert.txt output_edge.txt 20
-./density3D Allen.txt output_vert.txt output_edge.txt 20 3
-./density3D gridComplex.txt berlinvert.txt berlinedge.txt 20 2
 
-The pipeline includes 3 steps:
-1. Run LoadAllen in matlab
-2. Run DensityRips - This should be compiled under C++ 11 and it is tested on both Ubuntu and Windows. A compilation command is provided in MakeCommand file.
-3. Process the output with Morse_post.m - it also generates the .swc file for vaa3D, but note that the output from DensityRips is usually a graph - so the strategy for converting it to a tree still remains discussion. Right now we use maximum spanning tree to enforce a tree structure.
+Execute command:
+	./DiMorSC <input_file> <output_prefix> <persistence_threshold> <DIM> [saved_persist_pair]
 
+
+Parameters:
+	<input_file> 	- BIN file, format specified below.
+	<ouput_prefix> 	- Prefix of output files
+	<persistence_threshold> 	- Persistence threshold for simplification
+	<DIM> 			- Dimension of points (2 or 3)
+	[saved_persist_pair] 		- OPTIONAL. If specified, the program will load previously computed persistence pairing.
+	argv[6] 		- reserved.
+
+	
+Input file Specification:
+	The input file is composed of six blocks with the follow meaning:
+	<1. num_vertices>
+	<2. vertex list>
+	<3. num_edges>
+	<4. edge list>
+	<5. num_triangles>
+	<6. triangle list>
+	
+	1: contains a single int32 specifying the total number of vertices
+	2: contains geographic information of vertices in blocks.
+	   Each of the <num_vertices> blocks has the following information:
+	   [v.x1 v.x2 ... v.xn v.f], xn bounded by DIM.
+	   Currently, supports DIM = 2 and 3. For higher dimensions, please adjust the constant MAX_DIM in simplicial2complex.h
+	   v.x_i and v.f are all of type double
+	3: contains a single int32 specifying the total number of edges
+	4: specifies how edges are connected using index pairs.
+	   A pair [v1 v2] specifies an edge connecting vertices of 
+	   index v1 and v2.
+	5: contains a single int32 specifying the total number of triangles
+	6: specifies how triangles are connected using index tuples.
+	   A tuple [v1 v2 v3] specifies an triangles formed by connecting vertices of index v1, v2 and v3.
+
+	   
+Output Specification:
+	The output are two ascii files <output_prefix>_vert.txt, [output_prefix]_edge.txt.
+	See example for more input and output details.
+
+Compile:
+	g++ DiMorSC.cpp -I./phat/include -std=c++11 -o DiMorSC -w
+
+Execute example:
+	./DiMorSC Samples/Olfactory_OP_7_full_part.bin Samples/TestOut 1 3
 
 Dependencies:
-1) Our main code DensityRips depends on PHAT to compute persistence pairs. PHAT is available on github here (https://github.com/blazs/phat) - put PHAT file in the project root folder.
-2) Matlab code depends on matlab_bgl (https://www.mathworks.com/matlabcentral/fileexchange/10922-matlabbgl) - put matlab_bgl in matlab_helper folder
-3) vaa3d module depends on 'vaa3d_matlab_io', which is a folder in vaa3d source file - if you don't have it I can send you one separately.
+	DiMorSC depends on PHAT to compute persistence pairs. PHAT is available on github here (https://github.com/blazs/phat) - put PHAT file in the project root folder.
