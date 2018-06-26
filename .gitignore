@@ -2,4 +2,8 @@
 *.bin
 output/*
 bin/*
+core/boost
+!core/phat/ReadMe.txt
+image_processing/*.txt
+image_processing/*.ini
 

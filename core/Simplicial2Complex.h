@@ -1147,7 +1147,7 @@ void Simplicial2Complex::cancelPersistencePairs(double ve_delta){
 	cout << "\tDone\n";
 	cout.flush();
 
-	ofstream persistencePairs("ve_pvalues.txt", ios_base::trunc | ios_base::out);
+	ofstream persistencePairs("output/ve_pvalues.txt", ios_base::trunc | ios_base::out);
 	// V exists here.
 
 	#if (DEBUG)
@@ -1196,7 +1196,7 @@ void Simplicial2Complex::cancelPersistencePairs(double ve_delta){
 	}
 	
 	cout << "\tWriting smPair info\n";
-	ofstream et_stream("et_pvalues.txt", ios_base::trunc | ios_base::out);
+	ofstream et_stream("output/et_pvalues.txt", ios_base::trunc | ios_base::out);
 	P.output_sm_pair(et_stream);
 	cout << "\tDone\n";
 	
