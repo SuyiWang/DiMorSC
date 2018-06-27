@@ -82,6 +82,7 @@ int main(int argc, char* argv[]){
 		subg.set_edge(edge);
 		//subg.to_swc(para.outputprefix + to_string(counter) + ".swc");
 		subg.to_file(para.outputprefix + "_tree_" + to_string(counter++));
+		subg.to_simplcial(para.outputprefix + "_simplicial_" + to_string(counter++));
 	}
 	cout << "Components written: " << counter << endl;
 }

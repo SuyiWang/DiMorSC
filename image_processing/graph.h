@@ -118,5 +118,5 @@ public:
 	int set_edge(const vector<vector<int> > & tree_edge);
 	int to_swc(string filename);
 	int to_file(string filename);
-	int to_simplex(string filename);
+	int to_simplcial(string filename);
 };

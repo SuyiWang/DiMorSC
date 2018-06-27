@@ -20,3 +20,4 @@ void default_ini();
 string getnext(ifstream & filein, int & stat);
 vector<int> tokenize(const string &line, int & stat);
 int loadini(const string &filename, parameters &p);
+string getpath(const string &filename);

@@ -75,15 +75,25 @@ vector<int> tokenize(const string &line, int & stat){
 }
 
 
+string getpath(const string &filename){
+	int pathstop = filename.find_last_of("/\\");
+	string path = filename.substr(0, pathstop);
+	if (path.size() > 0) path = path + "/";
+	return path;
+}
+
+
 int loadini(const string &filename, parameters &p){
 	ifstream filein(filename);
 	
 
 	int stat = 0;
-	p.vertfile = getnext(filein, stat);
+	string path = getpath(filename);
+
+	p.vertfile = path + getnext(filein, stat);
 	if (stat == -1) {cout << "cannot get vert file\n"; return -1;}
 	
-	p.edgefile = getnext(filein, stat);
+	p.edgefile = path + getnext(filein, stat);
 	if (stat == -1) {cout << "cannot get edge file\n"; return -1;}
 	
 	p.outputprefix = getnext(filein, stat);

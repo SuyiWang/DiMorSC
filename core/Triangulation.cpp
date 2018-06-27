@@ -5,7 +5,7 @@ Author: Suyi Wang
 Input: mapinput.txt
 Output: vert.txt edge.txt triangle.txt
 
-Comments: Vertex index start from 1. All edges and triangles uses vertex index.
+Comments: Vertex index start from 0. All edges and triangles uses vertex index.
 */
 
 
@@ -78,7 +78,7 @@ vector<tp> triangle;
 
 // vector<tetra> tetrahedron;
 
-int vertcount = 1;
+int vertcount = 0;
 //vector<vector<vector<int> > > rev_idx;
 //vector<vector<vector<bool> > > marked;
 
@@ -467,6 +467,52 @@ void bin_output(string id){
 }
 
 
+void simplex_output(string id){
+    string binname = id + ".bin";
+    ofstream ofs(binname,ios::binary);
+    printf("writing vertex\n");
+
+    char* intwriter = new char[sizeof(int)];
+    int* intbuffer = (int*) intwriter;
+
+    char* vert = new char[sizeof(double) * 4];
+    double* vert_buffer = (double*) vert;
+
+    intbuffer[0] = vertex.size();
+    ofs.write(intwriter, sizeof(int));
+    for (int i = 0; i < vertex.size(); i++){
+        vert_buffer[0] = vertex[i].x; vert_buffer[1] = vertex[i].y;
+        vert_buffer[2] = vertex[i].z; vert_buffer[3] = vertex[i].v;
+        ofs.write(vert, sizeof(double) * 4);
+    }
+    
+    printf("writing edge\n");
+    char* edgechar = new char[sizeof(int) * 2];
+    int* edge_buffer = (int*) edgechar;
+    intbuffer[0] = edge.size();
+    ofs.write(intwriter, sizeof(int));
+    for (int i = 0; i < edge.size(); i++){
+        edge_buffer[0] = edge[i].p1; edge_buffer[1] = edge[i].p2;
+        ofs.write(edgechar, sizeof(int) * 2);
+    }
+    
+    printf("writing triangle\n");
+    char* trianglechar = new char[sizeof(int) * 3];
+    int* triangle_buffer = (int*) trianglechar;
+    intbuffer[0] = triangle.size();
+    ofs.write(intwriter, sizeof(int));
+    for (int i = 0; i < triangle.size(); i++){
+        triangle_buffer[0] = triangle[i].p1;
+        triangle_buffer[1] = triangle[i].p2;
+        triangle_buffer[2] = triangle[i].p3;
+        ofs.write(trianglechar, sizeof(int) * 3);
+    }
+    ofs.close();
+}
+
+
+
+
 int triangulation_with_vertex(){
     double THD = -1e-6;
 	int original_total = vertex.size();
@@ -725,10 +771,10 @@ void triangulation_2D(){
 int main(int argc, char* argv[])
 {
 	if (argc != 4){
-		cout << "usage: triangulation <id> <fill> <2 (2D)/3 (3D)>\n";
+		cout << "usage: triangulation <density file> <fill> <2 (2D)/3 (3D)>\n";
 		return 0;
 	}
-	string id(argv[1]);
+	string fileid(argv[1]);
 	int fillnot = atoi(argv[2]);
 	if (!fillnot) nb = 12;
 		else nb = 16;
@@ -737,7 +783,7 @@ int main(int argc, char* argv[])
 	if(dimension == 2){
 		nb = 2;
 	}
-    string filename = id + "_dens.bin";
+    string filename = fileid + "_dens.bin";
 
     printf("Initializing input\n");
     if (dimension ==3)
@@ -752,7 +798,8 @@ int main(int argc, char* argv[])
 		triangulation_2D();
 
     printf("Writing output\n");
-	bin_output(id);
+	//bin_output(fileid);
+    simplex_output(fileid);
 
     printf("Done\n");
     return 0;

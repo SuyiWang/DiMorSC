@@ -252,3 +252,39 @@ int graph::to_file(string filename){
 	return 0;
 }
 
+int graph::to_simplcial(string filename){
+	ofstream ofs(filename,ios::binary);
+
+	char* intwriter = new char[sizeof(int)];
+	int* intbuffer = (int*) intwriter;
+
+	char* vert = new char[sizeof(double) * 4];
+	double* vert_buffer = (double*) vert;
+
+	intbuffer[0] = v.size();
+	ofs.write(intwriter, sizeof(int));
+	for (int i = 0; i < v.size(); i++){
+		vert_buffer[0] = v[i].pos[0]; vert_buffer[1] = v[i].pos[1];
+		vert_buffer[2] = v[i].pos[2]; vert_buffer[3] = v[i].f;
+		ofs.write(vert, sizeof(double) * 4);
+	}
+	
+	char* edgechar = new char[sizeof(int) * 2];
+	int* edge_buffer = (int*) edgechar;
+	intbuffer[0] = v.size()-1;
+	ofs.write(intwriter, sizeof(int));
+	int counter = 0;
+	for (int i = 0; i < e.size(); i++){
+		for(int j = 0; j < e[i].size(); ++j){
+			// write only one edge for bidirenctional edges
+			if (i >= e[i][j]) continue;
+			edge_buffer[0] = i; edge_buffer[1] = e[i][j];
+			ofs.write(edgechar, sizeof(int) * 2);
+			counter ++;
+		}
+	}
+	
+	intbuffer[0] = 0;
+	ofs.write(intwriter, sizeof(int));
+	ofs.close();
+}
