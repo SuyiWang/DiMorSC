@@ -3,7 +3,8 @@
 output/*
 bin/*
 *.ini
-extern/*
+extern/boost/*
+extern/phat/*
 !extern/boost/dependency_on_boost
 !extern/phat/dependency_on_phat
 *.pyc
