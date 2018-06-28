@@ -1,21 +1,25 @@
-# DiMoSC for extracting 1-stable_manifold from density data
+## DiMoSC - Discrete Morse on Simplicial Complex
+A Toolbox for skeletonization
 
-The software DiMorSC (Discrete Morse on Simplicial Complex) extracts 1-stable manifold from functions defined on arbitrary simplicial complex (2D/3D and higher dimensions). It has a core part - the extraction of 1-stable manifold as well as two extension parts. Using the image processing extension is good for a quick start in applications such as neuron tracing and map reconstruction. And the tree simplification is used for simplifying the output from DiMorSC into a tree further simplification.
+The software DiMorSC extracts near-linear structures from simplicial complex. The near-linear structure is often referred to as skeleton or 1D non-linear structure (e.g. trees and graphs that can be decomposed into lines). The simplicial complex is a general representation of domains. Most common data structure such as image stacks and point cloud can be conveniently converted to simplicial complex and it can further represent more irregular and complicated domains.
 
-The input is a binary file describing the function on simplicial complex. The output is a graph representing the 1-stable manifold.
 
-# Prerequisites
+## Overview
+The tool box is a commandline based software. It has one core module - DiMorSC and two extension modules - Triangulate and graph2tree. The core module DiMorSC extracts skeleton from simplicial complex. The module Triangulate converts point cloud on regular grid (i.e. all points have integer coordinates) to simplicial complex. The module graph2tree converts the output of DiMorSC to trees.
+
+
+## Prerequisites
 1. Core code DiMorSC depends on PHAT to compute persistence pairs. PHAT is available on github here (https://github.com/blazs/phat)  or bitbucket (https://bitbucket.org/phat-code/phat) (tends to have newer version)- download and put PHAT file in "core" folder.
 2. Matlab code depends on matlab_bgl (https://www.mathworks.com/matlabcentral/fileexchange/10922-matlabbgl) - put matlab_bgl in tree_simplification folder
 
-# Compile DiMorSC
+## Compile DiMorSC
 In general simply execute "make" should compile the code (g++ 11 is required). If not, the code can be compiled using the following command.
 ## densityRips
 g++ DiMoSC.cpp -I./phat/include -std=c++11 -o DiMoSC
 ## Triangulation
 g++ Triangulation.cpp -std=c++11 -o triangulate
 
-# Running DiMorSC
+## Running DiMorSC
 format:
 
 ./DiMorSC \<input_file> \<output_prefix> \<persistence_threshold> \<dimension> [use_previous]
@@ -31,7 +35,7 @@ https://drive.google.com/open?id=0B_mktdY-pu10MHRlaUZneUhJMEE
 
 If the output on your machine is the same as the ones given in the output folder, congratulations, the setup is complete and you are good to go! (Test data good in Ubuntu only)
 
-# Input and output
+## Input and output
 ## input 
 
 input format (binary):
@@ -47,6 +51,17 @@ Each line specifies a vertex: x y z f critical. xyz are the coordinates of the v
 edge.txt:
 Each line specifies an edge: v1 v2 critial density. v1 v2 are two indices of the edge - index starts from 1. (This is DIFFERENT! It is designed this way because the post processing scripts are all in MATLAB). critical decalres the criticality of the edge - (-1) means ordinary. density specify the maximum intensity of its supporting saddle - later, the edges with low density can be removed using a threshold.
 
-# Contact
-wang.3066@buckeyemail.osu.edu
+## Terminology
+The skeleton is mathematically modelled as 1-stable manifold from Discrete Morse Theory. See reference for more mathematical details. 
+
+## Reference
+https://doi.org/10.1101/321489
+
+This work is credited to Computer Science and Engineering Department, The Ohio State University and 
+ Cold Spring Harbor Laboratory
+
+
+## Contact
+suyi.wang@ini.usc.edu
+
 
