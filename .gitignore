@@ -2,8 +2,9 @@
 *.bin
 output/*
 bin/*
-core/boost
-!core/phat/ReadMe.txt
-image_processing/*.txt
-image_processing/*.ini
+*.ini
+extern/*
+!extern/boost/dependency_on_boost
+!extern/phat/dependency_on_phat
+*.pyc
 
