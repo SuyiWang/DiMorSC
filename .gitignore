@@ -5,7 +5,7 @@ bin/*
 *.ini
 extern/boost/*
 extern/phat/*
-!extern/boost/dependency_on_boost
-!extern/phat/dependency_on_phat
+!extern/boost/ReadMe.txt
+!extern/phat/ReadMe.txt
 *.pyc
 

@@ -10,21 +10,22 @@ COREINCLUDES = -I./extern/phat/include
 TRI_INCLUDES = -I./extern/boost
 
 # target
+EXEC = DiMorSC Triangulate graph2tree
 CORE = core/DiMorSC.cpp core/DiscreteVField.h core/persistence.h core/Simplex.h core/Simplicial2Complex.h
 TRI = Triangulate
 TREE = graph2tree
 
-all: DiMorSC $(TRI) $(TREE)
+all: $(EXEC)
 	
 DiMorSC: $(CORE)
 	mkdir -p bin
 	mkdir -p output
 	$(CXX) $(CXXFLAGS) $(COREINCLUDES) -o bin/DiMorSC core/DiMorSC.cpp
 
-$(TRI): pointcloud/$(TRI).cpp
+Triangulate: pointcloud/$(TRI).cpp
 	$(CXX) $(CXXFLAGS) $(TRI_INCLUDES) -o bin/$(TRI) pointcloud/$(TRI).cpp
 
-$(TREE): tree_simplification/$(TREE).cpp
+graph2tree: tree_simplification/$(TREE).cpp
 	$(CXX) $(CXXFLAGS) -o bin/$(TREE) tree_simplification/$(TREE).cpp tree_simplification/graph.cpp tree_simplification/readini.cpp
 #clean:
 	

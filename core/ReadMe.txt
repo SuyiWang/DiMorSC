@@ -1,9 +1,9 @@
-Main Repository for DiMorSC. Computes 1-stable manifold from functions on simplicial complex.
+Core function of DiMorSC. Computes skeleton modeled as 1-stable manifold from functions on simplicial complex.
 
-Dependency: PHAT.
+Dependency: PHAT
 
 Download PHAT from one of the following site 
 
 bitbucket(recommended): https://bitbucket.org/phat-code/phat
 github: https://github.com/blazs/phat
-Put PHAT in this folder.
+Put PHAT in 'extern' folder.
