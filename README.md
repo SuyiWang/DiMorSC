@@ -38,6 +38,7 @@ https://drive.google.com/open?id=0B_mktdY-pu10MHRlaUZneUhJMEE
 ## DiMorSC input 
 
 input format (binary):
+
 [\<int32\> * 1] [\<double\> * 4 * n] [\<int32\> * 1] [\<int\> * 2 * m] [\<int32\>*1] [\<int32\> * 3 * k]
 
   * How to interpret it: There are altogether 3 blocks in the binary file, specifying vertex, edge and triangle information, respectively. The first block contains vertex information. It starts with a 32-bit integer n and is followed by 4*n double (64-bit float) - every 4 double describe the coordinate and function value of a vertex (for 3D case). For 2D case, the this block should contain 3*n doubles. The second block contains starts with 32-bit integer m and is followed by 2*m 32-bit integers. The integers are the vertex indices, which start from zero. Similar to the second block, the third block contains triangle information that starts with a 32-bit integer k and is followed by 3*k 32-bit integers specifying the indices of triangle vertices.
@@ -45,6 +46,7 @@ input format (binary):
 ## DiMorSC output
 
 output format: (3D)
+
 _vert.txt:
 * Each line specifies a vertex: x y z f c. xyz are the coordinates of the vertex. f denotes the function value on the vertex. c decalres the criticality of the vertex - (-1) means ordinary.
 
@@ -53,6 +55,7 @@ _edge.txt:
 
 ## Triangulate input
 input format (binary):
+
 [\<int32\> * 1] [\<double\> * 4 * n]
 * Similar to DiMorSC input, it starts with a 32-bit integer n and is followed by 4*n double (64-bit float) - every 4 double describe the coordinate and function value of a point (for 3D case).
 
