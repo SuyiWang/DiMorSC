@@ -1,31 +1,31 @@
 # the compiler
-CC = g++
+CXX = g++
 
 # flags:
 # -static-libstdc++ might be needed if running in matlab
-CFLAGS = -std=c++11 -w
+CXXFLAGS = -std=c++11 -w
 
 # includes
-INCLUDES = -I./core/phat/include
-TRI_INCLUDES = -I./core/boost
+COREINCLUDES = -I./extern/phat/include
+TRI_INCLUDES = -I./extern/boost
 
 # target
-TARGET = DiMorSC
-TRI = Triangulation
+CORE = core/DiMorSC.cpp core/DiscreteVField.h core/persistence.h core/Simplex.h core/Simplicial2Complex.h
+TRI = Triangulate
 TREE = graph2tree
 
-all: $(TARGET) $(TRI) $(TREE)
-
-$(TARGET): core/$(TARGET).cpp
+all: DiMorSC $(TRI) $(TREE)
+	
+DiMorSC: $(CORE)
 	mkdir -p bin
 	mkdir -p output
-	$(CC) $(CFLAGS) $(INCLUDES) -o bin/$(TARGET) core/$(TARGET).cpp
+	$(CXX) $(CXXFLAGS) $(COREINCLUDES) -o bin/DiMorSC core/DiMorSC.cpp
 
-$(TRI): core/$(TRI).cpp
-	$(CC) $(CFLAGS) $(TRI_INCLUDES) -o bin/Triangulate core/$(TRI).cpp
+$(TRI): pointcloud/$(TRI).cpp
+	$(CXX) $(CXXFLAGS) $(TRI_INCLUDES) -o bin/$(TRI) pointcloud/$(TRI).cpp
 
-$(TREE): image_processing/$(TREE).cpp
-	$(CC) $(CFLAGS) -o bin/$(TREE) image_processing/$(TREE).cpp image_processing/graph.cpp image_processing/readini.cpp
+$(TREE): tree_simplification/$(TREE).cpp
+	$(CXX) $(CXXFLAGS) -o bin/$(TREE) tree_simplification/$(TREE).cpp tree_simplification/graph.cpp tree_simplification/readini.cpp
 #clean:
 	
 	
