@@ -468,7 +468,7 @@ void bin_output(string id){
 
 
 void simplex_output(string id){
-    string binname = id + ".bin";
+    string binname = id + ".sc";
     ofstream ofs(binname,ios::binary);
     printf("writing vertex\n");
 
@@ -783,7 +783,7 @@ int main(int argc, char* argv[])
 	if(dimension == 2){
 		nb = 2;
 	}
-    string filename = fileid + "_dens.bin";
+    string filename = fileid + ".dens";
 
     printf("Initializing input\n");
     if (dimension ==3)
