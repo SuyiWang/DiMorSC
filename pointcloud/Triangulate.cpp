@@ -467,8 +467,15 @@ void bin_output(string id){
 }
 
 
-void simplex_output(string id){
-    string binname = id + ".sc";
+string rmvExt(const string &filename){
+    int pos = filename.find_last_of('.', string::npos);
+    if (pos == string::npos) return filename;
+    else return filename.substr(0, pos);
+}
+
+
+void simplex_output(string fname){
+    string binname = rmvExt(fname) + ".sc";
     ofstream ofs(binname,ios::binary);
     printf("writing vertex\n");
 
@@ -774,7 +781,7 @@ int main(int argc, char* argv[])
 		cout << "usage: triangulation <density file> <fill> <2 (2D)/3 (3D)>\n";
 		return 0;
 	}
-	string fileid(argv[1]);
+	string filename(argv[1]);
 	int fillnot = atoi(argv[2]);
 	if (!fillnot) nb = 12;
 		else nb = 16;
@@ -783,7 +790,6 @@ int main(int argc, char* argv[])
 	if(dimension == 2){
 		nb = 2;
 	}
-    string filename = fileid + ".dens";
 
     printf("Initializing input\n");
     if (dimension ==3)
@@ -799,7 +805,7 @@ int main(int argc, char* argv[])
 
     printf("Writing output\n");
 	//bin_output(fileid);
-    simplex_output(fileid);
+    simplex_output(filename);
 
     printf("Done\n");
     return 0;
