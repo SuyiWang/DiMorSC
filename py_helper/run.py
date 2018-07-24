@@ -75,14 +75,14 @@ def process(cfg):
 	if stage < 3:
 		print('[Run]\trunning DiMorSC:')
 		file = pipeline.DiMorSC(inputpointer, float(cfg[4]))
-		file = file.join('.ini')
 		graphcfg = [
-		file.join('_vert.txt'),
-		file.join('_edge.txt'),
+		''.join([file, '_vert.txt']),
+		''.join([file, '_edge.txt']),
 		file,
 		cfg[5],
 		cfg[6]
 		]
+		file = ''.join([file, '.ini'])
 		config.writeGraphConfig(file, graphcfg)
 		rtn.append(('ini', file))
 		inputpointer = file

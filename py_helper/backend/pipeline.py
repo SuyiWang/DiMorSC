@@ -41,14 +41,14 @@ def Gsmooth(data, sigma = 2, thd = 0.01, filename = 'output/0'):
 
 
 def triangulate(filename='output/0.dens', fill=0, dim=3):
-	call(["./DiMorSC/bin/Triangulate", filename, str(fill), str(dim)])
+	call(["./bin/Triangulate", filename, str(fill), str(dim)])
 	return rmvExt(filename) + '.sc'
 
 
 def DiMorSC(filename='output/0.sc', persist=1, dim=3):
 	outputprefix = rmvExt(filename)
-	call(["./DiMorSC/bin/DiMorSC", filename, outputprefix, str(persist), str(dim)])
+	call(["./bin/DiMorSC", filename, outputprefix, str(persist), str(dim)])
 	return outputprefix
 	# 1e7 points cost about 32G memory and 15min time.
 def graph2tree(ininame = 'output/0.ini'):
-	pass
+	return []
