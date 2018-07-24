@@ -6,7 +6,7 @@ Execute command:
 
 
 Parameters:
-	<input_file> 	- BIN file, format specified below.
+	<input.sc> 	- simplicial complex file, format specified below.
 	<ouput_prefix> 	- Prefix of output files
 	<persistence_threshold> 	- Persistence threshold for simplification
 	<DIM> 			- Dimension of points (2 or 3)
@@ -46,7 +46,7 @@ Compile:
 	g++ DiMorSC.cpp -I./phat/include -std=c++11 -o DiMorSC -w
 
 Execute example:
-	./DiMorSC Samples/Olfactory_OP_7_full_part.bin Samples/TestOut 1 3
+	./DiMorSC data/Olfactory_OP_7_trunc.sc output/Olfactory_OP_7_trunc 1 3
 
 Dependencies:
 	DiMorSC depends on PHAT to compute persistence pairs. PHAT is available on github here (https://github.com/blazs/phat) - put PHAT file in the project root folder.

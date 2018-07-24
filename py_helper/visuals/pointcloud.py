@@ -7,7 +7,6 @@ def Draw(vert, tc):
 	# tc: visualcontainer
 	# if has 4-th dimension, draw with color
 	# otherwise, plot grey
-	face_color = (1, 1, 1, .5)
 	density = vert[:, 3]
 	cnorm = density / abs(np.amax(density))
 	colors = color.get_colormap("hsl").map(cnorm)#.reshape(density.shape + (-1,))
@@ -20,8 +19,18 @@ def Draw(vert, tc):
 
 
 def new(obj, viewer):
-	scatter = Draw(obj._data['vert'], viewer)
+	scatter = Draw(obj._visdata['vert'], viewer)
 	viewer.visuallist[obj._ID] = scatter
+
+
+def update(obj, viewer):
+	vert = obj._visdata['vert']
+	density = vert[:, 3]
+	cnorm = density / abs(np.amax(density))
+	colors = color.get_colormap("hsl").map(cnorm)#.reshape(density.shape + (-1,))
+	V = vert[:, 0:3]
+
+	viewer.visuallist[obj._ID].set_data(V, edge_color=None, face_color = colors, size=3)
 
 
 def BuildScene():
@@ -41,17 +50,32 @@ def BuildScene():
 	return view
 
 
-def Load(filename):
+def load(filename):
 	# load binary simplex file as a graph
 	# the file is used for DiMorSC input.
 	file = open(filename, 'rb')
 
 	vert_num = np.fromfile(file, dtype=np.int32, count = 1, sep='')
-	vert =  np.fromfile(file, dtype=np.double, count = vert_num * 4, sep='')
+	if vert_num == 0:
+		file.close()
+		return None, False
+	vert =  np.fromfile(file, dtype=np.double, count = vert_num[0] * 4, sep='')
 	vert = np.reshape(vert, (-1, 4))
 	vert = vert[:, 0:4]
-	
-	return vert
+
+	maxx = int(1e6)
+	if len(vert) > maxx:
+		print('[point cloud]\tdownsampling input')
+		downsample = True
+
+		#get random samples without replacement
+		idx = np.random.choice(len(vert), maxx, replace = False)
+		# truncate data
+		vert = vert[idx, :]
+	else:
+		downsample = False
+	file.close()
+	return vert, downsample
 
 
 if __name__ == '__main__':

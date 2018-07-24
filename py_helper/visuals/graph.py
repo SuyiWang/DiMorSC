@@ -1,17 +1,87 @@
 import numpy as np
 import sys
+import os
 
 from vispy import app, visuals, scene, color
 
+# Load file with no extension - as graph
 def Load(fileprefix):
 	vertinput = np.loadtxt(fileprefix+'_vert.txt')
-	vert = vertinput[:, 0:4]
+	if len(vertinput) > 0:
+		vert = vertinput[:, 0:4]
+	else:
+		vert = None
+
 	edgeinput = np.loadtxt(fileprefix + '_edge.txt')
-	edge = edgeinput[:, 0:2].astype('i')
-	# now vertex are indexed from 1. Hence we convert it back.
-	edge = edge-1
+	if len(edgeinput) > 0:
+		edge = edgeinput[:, 0:2].astype('i')
+		# now vertex are indexed from 1. Hence we convert it back.
+		edge = edge-1
+	else:
+		edge = None
 	
 	return edge, vert
+
+# Done
+def loadSWC(filename):
+	swcinput = np.loadtxt(filename)
+	if len(swcinput) > 0:
+		vert = swcinput[:, 2:6]
+		# assuming the first line is root.
+		edge = swcinput[1:, (0, 6)].astype('i')
+		edge = edge - 1
+	else:
+		edge = None
+		vert = None
+	return edge, vert
+
+# Done
+def loadini(filename):
+	graphname = []
+	counter = 0
+	with open(filename, "r") as fp:
+		line = fp.readline()
+		while line:
+			if line.startswith('#'):
+				line = fp.readline()
+				continue
+			# readline has \n in the end
+			graphname.append(line.rstrip('\n'))
+			counter += 1
+			if counter == 2:
+				break
+			line = fp.readline()
+
+	fp.close()
+
+	if len(graphname) < 2:
+		print('[graph] not enough filename spceified. doing nothing')
+		return None, None
+
+	path = getPath(filename)
+	print ('[graph]: Loading from path ' + path)
+	vertinput = np.loadtxt(path + graphname[0])
+	if len(vertinput) > 0:
+		vert = vertinput[:, 0:4]
+	else:
+		vert = None
+	edgeinput = np.loadtxt(path + graphname[1])
+	if len(edgeinput) > 0:
+		edge = edgeinput[:, 0:2].astype('i')
+		# now vertex are indexed from 1. Hence we convert it back.
+		edge = edge-1
+	else:
+		edge = None
+	
+	return edge, vert
+
+
+def getPath(s):
+	paths = s.split('/');
+	if len(paths) == 1:
+		return ""
+	else:
+		return s.rsplit('/', 1)[0] + '/'
 
 
 def DrawPoints(vert, tc):
@@ -47,6 +117,13 @@ def new(obj, viewer):
 	viewer.visuallist[obj._ID] = graph
 
 
+def update(obj, viewer):
+	vert = obj._visdata['vert'][:, 0:3]
+	viewer.visuallist[obj._ID].set_data(pos = vert, 
+										color='#f006',
+										connect = obj._visdata['edge']) 
+
+
 def BuildScene():
 	# build canvas
 	canvas = scene.SceneCanvas(keys='interactive', title='Graph3D', show=True)
@@ -71,11 +148,17 @@ def LoadSimplexGraph(filename):
 	file = open(filename, 'rb')
 
 	vert_num = np.fromfile(file, dtype=np.int32, count = 1, sep='')
+	if vert_num == 0:
+		file.close()
+		return None, None
 	vert =  np.fromfile(file, dtype=np.double, count = vert_num[0] * 4, sep='')
 	vert = np.reshape(vert, (-1, 4))
 	vert = vert[:, 0:3]
 
 	edge_num = np.fromfile(file, dtype=np.int32, count = 1, sep='')
+	if edge_num == 0:
+		file.close()
+		return None, None
 	edge = np.fromfile(file, dtype=np.int32, count = edge_num[0] * 2, sep='')
 	edge = np.reshape(edge, (-1, 2))
 	file.close()

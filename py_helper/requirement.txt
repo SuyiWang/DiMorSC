@@ -1,0 +1,10 @@
+#PyOpenGL_accelerate
+# In Windows
+# python -m pip install -r requirement.txt
+# In Linux
+# pip install -r requirements.txt
+numpy
+scipy
+PyOpenGL
+scikit-image
+vispy

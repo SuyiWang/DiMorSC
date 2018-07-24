@@ -7,5 +7,6 @@ extern/boost/*
 extern/phat/*
 !extern/boost/ReadMe.txt
 !extern/phat/ReadMe.txt
+!py_helper/requirement.txt
 *.pyc
 
