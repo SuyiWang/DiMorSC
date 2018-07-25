@@ -19,6 +19,8 @@ from dataio import binWriter
 import scipy.ndimage as ndimage
 from dataio import imageLoader
 import os
+from dataio import config
+from glob import glob
 
 
 def rmvExt(filename):
@@ -41,14 +43,25 @@ def Gsmooth(data, sigma = 2, thd = 0.01, filename = 'output/0'):
 
 
 def triangulate(filename='output/0.dens', fill=0, dim=3):
+	# writes to output/
 	call(["./bin/Triangulate", filename, str(fill), str(dim)])
 	return rmvExt(filename) + '.sc'
 
 
 def DiMorSC(filename='output/0.sc', persist=1, dim=3):
+	# writes to path given by output prefix
+	# here it's the same directory as input 
 	outputprefix = rmvExt(filename)
 	call(["./bin/DiMorSC", filename, outputprefix, str(persist), str(dim)])
 	return outputprefix
 	# 1e7 points cost about 32G memory and 15min time.
+
 def graph2tree(ininame = 'output/0.ini'):
-	return []
+	rtn = []
+	inicfg = config.getGraphConfig(ininame)
+	if inicfg is not None:
+		outputprefix = ''.join([inicfg[2], '_tree'])
+		call(["./bin/graph2tree", ininame])
+	# for now it did not return anything
+	# the result can be viewed using view.py
+	return rtn

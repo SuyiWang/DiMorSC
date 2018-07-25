@@ -3,7 +3,7 @@ DiMorSC Pipeline
 '''
 from backend import pipeline
 import sys
-from os.path import basename
+from os.path import basename, splitext
 from dataio import config
 
 def getStage(filetype):
@@ -23,6 +23,7 @@ def writeFiles(filelist):
 	if f is not None:
 		for item in filelist:
 			f.write(item[1])
+			f.write('\n')
 		f.close()
 	else:
 		print('[run]\tError creating log to output/log.txt')
@@ -43,7 +44,8 @@ def process(cfg):
 	workpath = 'output/'
 	# decides which input to load
 	inputpointer = cfg[0]
-	name = basename(cfg[0])
+	name, ext = splitext(basename(cfg[0]))
+
 	stage = getStage(cfg[1])
 
 	if stage < 0:
@@ -75,10 +77,12 @@ def process(cfg):
 	if stage < 3:
 		print('[Run]\trunning DiMorSC:')
 		file = pipeline.DiMorSC(inputpointer, float(cfg[4]))
+		
+		# prepare input for next stage
 		graphcfg = [
-		''.join([file, '_vert.txt']),
-		''.join([file, '_edge.txt']),
-		file,
+		''.join([name, '_vert.txt']),
+		''.join([name, '_edge.txt']),
+		''.join(file),
 		cfg[5],
 		cfg[6]
 		]
