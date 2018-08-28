@@ -72,17 +72,36 @@ int main(int argc, char* argv[]){
 	cout << "checking vertex and edge redundancy\n";
 	G.check_redundancy();
 	cout << "Counting Components: ";
-	vector<graph> subgraph = G.split(para.comp);
+	vector<graph> subgraph = G.split();
 	//cout << subgraph.size() << endl;
 
 	int counter = 0;
-	for (auto subg : subgraph){
-		if (subg.size() < para.comp) continue;
-		vector<vector<int> > edge = subg.dijkstra(para.root);
-		subg.set_edge(edge);
-		//subg.to_swc(para.outputprefix + to_string(counter) + ".swc");
-		subg.to_file(para.outputprefix + "_tree_" + to_string(counter++));
-		subg.to_simplcial(para.outputprefix + "_simplicial_" + to_string(counter++));
+	if (para.comp >=0){
+		cout << "Component threshold: " << para.comp << endl;
+		for (auto subg : subgraph){
+			if (subg.size() < para.comp) continue;
+			vector<vector<int> > edge = subg.dijkstra(para.root);
+			subg.set_edge(edge);
+			//subg.to_swc(para.outputprefix + to_string(counter) + ".swc");
+			subg.to_file(para.outputprefix + "_tree_" + to_string(counter));
+			subg.to_simplcial(para.outputprefix + "_simplicial_" + to_string(counter++));
+		}
+	}
+	else{
+		int max_component = 0;
+		for (auto subg : subgraph)
+			if (subg.size() > max_component) max_component = subg.size();
+
+		cout << "Output maximum component(s), size: " << max_component <<endl;
+		for (auto subg:subgraph)
+			if (subg.size() == max_component){
+				vector<vector<int> > edge = subg.dijkstra(para.root);
+				subg.set_edge(edge);
+				//subg.to_swc(para.outputprefix + to_string(counter) + ".swc");
+				subg.to_file(para.outputprefix + "_tree_" + to_string(counter));
+				subg.to_simplcial(para.outputprefix + "_simplicial_" + to_string(counter++));
+			}
 	}
 	cout << "Components written: " << counter << endl;
+	
 }

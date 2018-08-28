@@ -130,7 +130,7 @@ graph graph::traverse(const int start, const vector<point> & v, const vector<vec
 }
 
 
-vector<graph> graph::split(int n){
+vector<graph> graph::split(){
 	vector<graph> rtn;
 
 	vector<bool> touched(v.size(), false);

@@ -16,7 +16,7 @@ void default_ini(){
 		outstream << "5\n";
 	*/
 	// else create file in current directory
-	ofstream outstream("0.ini");
+	ofstream outstream("output/0.ini");
 	outstream << "# vertex filename\n";
 	outstream << "0_vert.txt\n";
 	outstream << "# edge filename\n";
@@ -111,7 +111,10 @@ int loadini(const string &filename, parameters &p){
 	// optional
 	int optstat = 0;
 	p.comp = atoi(getnext(filein, optstat).c_str());
-	if (optstat == -1) {cout << "Using maximum component\n";}
+	if (optstat == -1) {
+		// use only one component
+		p.comp = -1;
+	}
 
 	string shiftstr = getnext(filein, optstat);
 	if (optstat == -1) {cout << "shift [0 0 0]\n";}

@@ -113,7 +113,7 @@ public:
 	
 	vector<vector<int> > dijkstra(const vector<int> &pos);
 	
-	vector<graph> split(int n);
+	vector<graph> split();
 
 	int set_edge(const vector<vector<int> > & tree_edge);
 	int to_swc(string filename);
