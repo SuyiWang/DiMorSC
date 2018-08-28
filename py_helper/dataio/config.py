@@ -21,7 +21,7 @@ template_pip = """# Comments
 
 """
 
-def getPipConfig(file):
+def getLines(file):
 	rtn = []
 	with open(file, "r") as fp:
 		line = fp.readline()
@@ -33,6 +33,10 @@ def getPipConfig(file):
 			rtn.append(line.rstrip('\n'))
 			line = fp.readline()
 	fp.close()
+	return rtn
+
+def getPipConfig(file):
+	rtn = getLines(file)
 
 	if len(rtn) != 7:
 		print('[getPipConfig] Exactly 6 parameters must be provided. doing nothing.')
@@ -94,7 +98,13 @@ template_graph = """# vertex filename
 """
 
 def getGraphConfig(file):
-	print('[config]\tget graph config: TODO')
+	cfg = getLines(file)
+	if len(cfg) < 5:
+		print('[getGraphConfig]: Parameter less than 5')
+		return None
+	# check file exist
+	# check parameters
+	return cfg
 
 def writeGraphConfig(filename, graph_config):
 	f = open(filename, 'w')

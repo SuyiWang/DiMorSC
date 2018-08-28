@@ -66,8 +66,7 @@ The skeleton is mathematically modelled as 1-stable manifold from Discrete Morse
 ## Reference
 https://doi.org/10.1101/321489
 
-This work is credited to Computer Science and Engineering Department, The Ohio State University and 
- Cold Spring Harbor Laboratory
+The core c++ code and python pipeline are credited to Computer Science and Engineering Department, The Ohio State University and Cold Spring Harbor Laboratory
 
 
 ## Contact
