@@ -84,7 +84,8 @@ def process(cfg):
 		''.join([name, '_edge.txt']),
 		''.join(file),
 		cfg[5],
-		cfg[6]
+		cfg[6],
+		cfg[7]
 		]
 		file = ''.join([file, '.ini'])
 		config.writeGraphConfig(file, graphcfg)
@@ -102,7 +103,6 @@ def process(cfg):
 
 
 if __name__  == "__main__":
-	print ("[Run]\tparameters detected: " + str(len(sys.argv)))
 	if len(sys.argv) != 2:
 		print ("[Run]\tusage: run <config_file>")
 	else:

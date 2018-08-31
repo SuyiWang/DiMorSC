@@ -4,6 +4,7 @@
 # In Linux
 # pip install -r requirements.txt
 numpy
+pillow
 scipy
 PyOpenGL
 scikit-image

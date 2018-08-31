@@ -1,6 +1,8 @@
 from os import path
 
-
+'''
+USAGE:
+'''
 template_pip = """# Comments
 # Do not remove unused parameters
 # [Required for all] input filename
@@ -18,7 +20,7 @@ template_pip = """# Comments
 {root}
 # [Required for graph2tree] Saddle threshold
 {saddleThd}
-
+# [Optional] Component size threshold. if not specified, the largest is kept
 """
 
 def getLines(file):
@@ -37,9 +39,9 @@ def getLines(file):
 
 def getPipConfig(file):
 	rtn = getLines(file)
-
-	if len(rtn) != 7:
-		print('[getPipConfig] Exactly 6 parameters must be provided. doing nothing.')
+	print('parameters detected:', len(rtn))
+	if len(rtn) != 7 and len(rtn) != 8:
+		print('[getPipConfig] incorrect config file. See config.py for usage.')
 		return None
 	else:
 		if not path.isdir(rtn[0]) and not path.isfile(rtn[0]):
@@ -47,6 +49,8 @@ def getPipConfig(file):
 			return None
 		
 		# TODO
+		if len(rtn) == 7:
+			rtn.append('-1')
 		# check sigma should be positive
 		# check filetype should be volume/cloud/sc/graph
 		# check densThd should be number
@@ -71,13 +75,13 @@ def writePipConfig(filename, pip_config):
 	f = open(filename, 'w')
 	if f is not None:
 		to_write = template_pip.format(
-			inputname = pip_config[0],
-			type = pip_config[1],
-			sigma = pip_config[2],
-			densThd = pip_config[3],
-			persist = pip_config[4],
-			root = pip_config[5],
-			saddleThd = pip_config[6],
+			inputname=pip_config[0],
+			type=pip_config[1],
+			sigma=pip_config[2],
+			densThd=pip_config[3],
+			persist=pip_config[4],
+			root=pip_config[5],
+			saddleThd=pip_config[6],
 			)
 		f.write(to_write)
 		f.close()
@@ -95,6 +99,8 @@ template_graph = """# vertex filename
 {root}
 # threshold for simplification
 {sadd_thd}
+# component threshold C. Only component larger than C will be kept
+{comp_thd}
 """
 
 def getGraphConfig(file):
@@ -115,6 +121,7 @@ def writeGraphConfig(filename, graph_config):
 			outname=graph_config[2],
 			root=graph_config[3],
 			sadd_thd=graph_config[4],
+			comp_thd=graph_config[5]
 			)
 		f.write(to_write)
 		f.close()
