@@ -80,8 +80,9 @@ def loadFolder(path, filetype = None):
 
 	rtn = np.stack(data, axis=2)
 	# skip an empty line
-	print ("")
-	print ("[ImageLoader]\tFiles stacked with size", rtn.shape)
+	print("")
+	print("[ImageLoader]\tFiles stacked with size", rtn.shape)
+	print("[ImageLoader]\tMax pixel:", np.amax(rtn))
 	return rtn
 
 
@@ -245,15 +246,10 @@ def loadImage(filename, filetype = None):
 	
 	if (im.ndim > 2):
 		im = np.sum(im, axis=2)
-	if im.dtype != np.uint8:
-		maxx = np.amax(im)
-		input = np.array(im, dtype='f8')
-		input = input*(255.0/maxx)
-	else:
-		input = np.array(im, dtype='f8')
-	msg = "[ImageLoader] Image %s loaded. Size: "%printfilename  + str(input.shape)
+	im = np.array(im, dtype='f8')
+	msg = "[ImageLoader] Image %s loaded. Size: "%printfilename  + str(im.shape)
 	print (msg)
-	return input
+	return im
 
 
 '''
