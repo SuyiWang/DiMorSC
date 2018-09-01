@@ -1,18 +1,32 @@
 /*
-Merge result
+Merge multiple graph in global coordinate.
 Author: Suyi Wang
 
-Input: merge_settings.ini xxx_vert.txt xxx_edge.txt
-Output: binary file
-
-Comments: Vertex index start from 1. All edges and triangles uses vertex index.
-Output segments from DM are lines connecting neighbouring cells along axis
-so diffusing is simplified.
+Input: merger_config
+Output: Simplicial complex (to be pipelined to DiMorSC)
 */
 
+// g++ merger/merge_graph.cpp core/hash.cpp core/readini.cpp -O3 -std=c++11 -I./extern/boost -I./core -o bin/merge_graph -w 2>error
 
-// g++ merge_graph.cpp -std=c++11 -I boost_1_64_0/ -o merge_graph_exe
-// g++ merge_graph.cpp -O3 -std=c++11 -I C:/virtualE/Develop/boost_1_63_0/ -o merge_graph
+/*
+Merger config has the following format:
+Actual config should not contain comments
+
+# output filename
+merged
+# overlap for x,y,z dimension
+3 3 3
+# filename bounding box (including the overlapping region)
+0 0 0 0 71 50 50
+1 0 0 47 71 50 97
+2 0 0 94 71 50 117
+3 0 47 0 71 97 50
+4 0 47 47 71 97 97
+5 0 47 94 71 97 117
+6 0 94 0 71 101 50
+7 0 94 47 71 101 97
+8 0 94 94 71 101 117
+*/
 
 
 #include<stdio.h>
@@ -23,11 +37,9 @@ so diffusing is simplified.
 #include<algorithm>
 #include<cmath>
 
+#include"hash.h"
+#include"readini.h"
 
-#include <boost/tuple/tuple.hpp>
-#include <boost/tuple/tuple_comparison.hpp>
-#include <boost/unordered_set.hpp>
-#include <boost/unordered_map.hpp>
 
 using namespace std;
 
@@ -38,233 +50,100 @@ using namespace std;
 // Do     fill inner part of a cube - 16
 int nb = 12;
 
-
-// *********** begin vertex pair***********
-struct point{
-    int x,y,z;
-    double v;
-    bool in_bbox;
-};
-
-std::size_t hash_value(const point &pt){
-  std::size_t seed = 0;
-  boost::hash_combine(seed, pt.x);
-  boost::hash_combine(seed, pt.y);
-  boost::hash_combine(seed, pt.z);
-  return seed;
-}
-
-bool operator==(const point &a, const point &b)
-{
-  return a.x == b.x && a.y == b.y && a.z == b.z;
-}
-
-class VertexHash{
-	private:
-		boost::unordered_map<point, int> v_hash;
-	public:
-		VertexHash(){
-			v_hash.clear();
-		}
-		int GetIndex(point p){
-			if (v_hash.count(p) > 0)
-				return v_hash[p];
-			else
-				return -1;
-		}
-		void InsertVertex(point p, int n){
-			v_hash.insert(make_pair(p, n));
-		}
-		int size(){return v_hash.size();}
-		boost::unordered_map<point, int>::iterator begin(){
-			return v_hash.begin();
-		}
-		boost::unordered_map<point, int>::iterator end(){
-			return v_hash.end();
-		}
-};
-// *********** End of vertex pair ***********
-
-
-// *********** begin Edge pair & it's hashing***********
-class cp{
-	public:
-		int p1,p2;  // must be vertices after merge.
-		void Reorder(){
-			if (p1>p2) swap(p1, p2);
-		}
-};
-
-std::size_t hash_value(const cp &e){
-  std::size_t seed = 0;
-  boost::hash_combine(seed, e.p1);
-  boost::hash_combine(seed, e.p2);
-  return seed;
-}
-
-bool operator==(const cp &a, const cp &b)
-{
-  return a.p1 == b.p1 && a.p2 == b.p2;
-}
-
-class EdgeHash{
-	// Assuming vertex are given in ascending order
-	private:
-		boost::unordered_set<cp> e_hash;
-	
-	public:
-		EdgeHash(){
-			e_hash.clear();
-		}
-		bool HasEdge(cp edge){
-			return e_hash.count(edge) > 0;
-		}
-		void InsertEdge(cp edge){
-			e_hash.insert(edge);
-		}
-		int size(){return e_hash.size();}
-		boost::unordered_set<cp>::iterator begin(){return e_hash.begin();}
-		boost::unordered_set<cp>::iterator end(){return e_hash.end();}
-};
-// *********** End of Edge pair***********
-
-
-// *********** begin Triangle pair***********
-struct tp{
-	public:
-		int p1,p2,p3;
-		void Reorder(){
-			if (p1>p2) swap(p1, p2);
-			if (p1>p3) swap(p1, p3);
-			if (p2>p3) swap(p2, p3);
-		}
-};
-
-std::size_t hash_value(const tp &t){
-  std::size_t seed = 0;
-  boost::hash_combine(seed, t.p1);
-  boost::hash_combine(seed, t.p2);
-  boost::hash_combine(seed, t.p3);
-  return seed;
-}
-
-bool operator==(const tp &a, const tp &b)
-{
-  return a.p1 == b.p1 && a.p2 == b.p2 && a.p3 == b.p3;
-}
-
-class TriangleHash{
-	// Assuming vertex are given in ascending order
-	private:
-		boost::unordered_set<tp> t_hash;
-	public:
-		TriangleHash(){
-			t_hash.clear();
-		}
-		bool HasTriangle(tp triangle){
-			return t_hash.count(triangle) > 0;
-		}
-		void InsertTriangle(tp triangle){
-			t_hash.insert(triangle);
-		}
-		int size(){return t_hash.size();}
-		boost::unordered_set<tp>::iterator begin(){return t_hash.begin();}
-		boost::unordered_set<tp>::iterator end(){return t_hash.end();}
-};
-// *********** End of Triangle pair ***********
-
-
 int vcount = 0; //for vector vertex
 vector<point> vertex;
 vector<cp> edge;
 vector<tp> triangle;
 
-
 VertexHash vh;
 EdgeHash eh;
 TriangleHash th;
 
-vector<int> trans_info;
 vector<point> graph_vert;
 
 
 int triangle_cube(int i, int j, int k, int AB){
-    if (AB == 0){ // triangles of Type A
-        int TypeAtri[3*16][3] = {{0,0,0}, {1,0,1}, {0,0,1},
-                          {0,0,0}, {1,0,0}, {1,0,1},
-                          {0,0,0}, {0,1,1}, {0,1,0},
-                          {0,0,0}, {0,0,1}, {0,1,1},
-                          {0,0,0}, {1,1,0}, {1,0,0},
-                          {0,0,0}, {0,1,0}, {1,1,0},
+	if (AB == 0){ // triangles of Type A
+		int TypeAtri[3*16][3] = {{0,0,0}, {1,0,1}, {0,0,1},
+						  {0,0,0}, {1,0,0}, {1,0,1},
+						  {0,0,0}, {0,1,1}, {0,1,0},
+						  {0,0,0}, {0,0,1}, {0,1,1},
+						  {0,0,0}, {1,1,0}, {1,0,0},
+						  {0,0,0}, {0,1,0}, {1,1,0},
 						  {1,0,0}, {1,1,0}, {1,0,1},
 						  {1,0,1}, {1,1,0}, {1,1,1},
 						  {0,1,0}, {0,1,1}, {1,1,0},
 						  {0,1,1}, {1,1,0}, {1,1,1},
 						  {0,0,1}, {0,1,1}, {1,0,1},
 						  {0,1,1}, {1,1,1}, {1,0,1},
-                          {0,0,0}, {0,1,1}, {1,0,1},// fill
-                          {0,0,0}, {1,0,1}, {1,1,0},
-                          {1,1,0}, {1,0,1}, {0,1,1},
-                          {0,0,0}, {1,1,0}, {0,1,1}
-                   };
-        for (int cnt = 0; cnt < nb; cnt++){
-            int sub1, sub2, sub3;
-            point p;
-            p.x = i + TypeAtri[cnt*3][0]; p.y = j + TypeAtri[cnt*3][1]; p.z = k + TypeAtri[cnt*3][2];
-            sub1 = vh.GetIndex(p);
-            if (sub1 < 0){
-            	p.v = 1e-6;
-                vh.InsertVertex(p, vcount);
-                sub1 = vcount;
-                vcount++;
-                vertex.push_back(p);
-            }
+						  {0,0,0}, {0,1,1}, {1,0,1},// fill
+						  {0,0,0}, {1,0,1}, {1,1,0},
+						  {1,1,0}, {1,0,1}, {0,1,1},
+						  {0,0,0}, {1,1,0}, {0,1,1}
+				   };
+		for (int cnt = 0; cnt < nb; cnt++){
+			int sub1, sub2, sub3;
+
+			point p;
+			p.x = i + TypeAtri[cnt*3][0];
+			p.y = j + TypeAtri[cnt*3][1];
+			p.z = k + TypeAtri[cnt*3][2];
+			sub1 = vh.GetIndex(p);
+			if (sub1 < 0){
+				p.v = 1e-6;
+				vh.InsertVertex(p, vcount);
+				sub1 = vcount;
+				vcount++;
+				vertex.push_back(p);
+			}
 			
-			p.x = i + TypeAtri[cnt*3+1][0]; p.y = j + TypeAtri[cnt*3+1][1];
+			p.x = i + TypeAtri[cnt*3+1][0];
+			p.y = j + TypeAtri[cnt*3+1][1];
 			p.z = k + TypeAtri[cnt*3+1][2];
 			sub2 = vh.GetIndex(p);
-            if (sub2 < 0){
-                p.v = 1e-6;
-                vh.InsertVertex(p, vcount);
-                sub2 = vcount;
-              	vcount++;
-                vertex.push_back(p);
-            }
+			if (sub2 < 0){
+				p.v = 1e-6;
+				vh.InsertVertex(p, vcount);
+				sub2 = vcount;
+				vcount++;
+				vertex.push_back(p);
+			}
 
-			p.x = i + TypeAtri[cnt*3+2][0]; p.y = j + TypeAtri[cnt*3+2][1];
+			p.x = i + TypeAtri[cnt*3+2][0];
+			p.y = j + TypeAtri[cnt*3+2][1];
 			p.z = k + TypeAtri[cnt*3+2][2];
 			sub3 = vh.GetIndex(p);
-            if (sub3 < 0){
-                p.v = 1e-6;
-                vh.InsertVertex(p, vcount);
-                sub3 = vcount;
-                vcount++;
-                vertex.push_back(p);
-            }
-            
-            tp new_triangle;
-            new_triangle.p1 = sub1; new_triangle.p2 = sub2; new_triangle.p3 = sub3;
+			if (sub3 < 0){
+				p.v = 1e-6;
+				vh.InsertVertex(p, vcount);
+				sub3 = vcount;
+				vcount++;
+				vertex.push_back(p);
+			}
+			
+			tp new_triangle;
+			new_triangle.p1 = sub1; new_triangle.p2 = sub2; new_triangle.p3 = sub3;
 			new_triangle.Reorder();
 			if (!th.HasTriangle(new_triangle)){
 				triangle.push_back(new_triangle);
 				th.InsertTriangle(new_triangle);
 			}
 
-            cp new_edge1;
-            new_edge1.p1 = sub1; new_edge1.p2 = sub2;
+			cp new_edge1;
+			new_edge1.p1 = sub1; new_edge1.p2 = sub2;
 			new_edge1.Reorder();
-            cp new_edge2;
-            new_edge2.p1 = sub1; new_edge2.p2 = sub3;
+			cp new_edge2;
+			new_edge2.p1 = sub1; new_edge2.p2 = sub3;
 			new_edge2.Reorder();
-            cp new_edge3;
-            new_edge3.p1 = sub2; new_edge3.p2 = sub3;
+			cp new_edge3;
+			new_edge3.p1 = sub2; new_edge3.p2 = sub3;
 			new_edge3.Reorder();
 
-            if (DEBUG){
-                printf("\t%d %d %d\n", sub1, sub2, sub3);
-            }
+			if (DEBUG){
+				printf("\t%d %d %d\n", sub1, sub2, sub3);
+			}
 
-            if (!eh.HasEdge(new_edge1)){
+			if (!eh.HasEdge(new_edge1)){
 				edge.push_back(new_edge1);
 				eh.InsertEdge(new_edge1);
 			}
@@ -276,84 +155,89 @@ int triangle_cube(int i, int j, int k, int AB){
 				edge.push_back(new_edge3);
 				eh.InsertEdge(new_edge3);
 			}
-        }
-    }
-    else{// triangles of Type B
-        int TypeAtri[3*16][3] = {{0,0,0}, {0,0,1}, {0,1,0},
-                               {0,0,0}, {0,1,0}, {1,0,0},
-                               {0,0,0}, {1,0,0}, {0,0,1},
-                               {0,1,1}, {0,1,0}, {0,0,1},
-                               {0,1,0}, {1,1,0}, {1,0,0},
-                               {0,0,1}, {1,0,0}, {1,0,1},
+		}
+	}
+	else{// triangles of Type B
+		int TypeAtri[3*16][3] = {{0,0,0}, {0,0,1}, {0,1,0},
+							   {0,0,0}, {0,1,0}, {1,0,0},
+							   {0,0,0}, {1,0,0}, {0,0,1},
+							   {0,1,1}, {0,1,0}, {0,0,1},
+							   {0,1,0}, {1,1,0}, {1,0,0},
+							   {0,0,1}, {1,0,0}, {1,0,1},
 							   {0,1,1}, {1,1,1}, {0,0,1},
 							   {0,0,1}, {1,0,1}, {1,1,1},
 							   {1,0,1}, {1,1,1}, {1,0,0},
 							   {1,0,0}, {1,1,0}, {1,1,1},
 							   {0,1,1}, {1,1,1}, {0,1,0},
 							   {0,1,0}, {1,1,1}, {1,1,0},
-                               {0,0,1}, {0,1,0}, {1,0,0},// fill
-                               {0,1,0}, {1,0,0}, {1,1,1},
-                               {0,0,1}, {1,1,1}, {1,0,0},
-                               {0,0,1}, {1,1,1}, {0,1,0}
-                               };
+							   {0,0,1}, {0,1,0}, {1,0,0},// fill
+							   {0,1,0}, {1,0,0}, {1,1,1},
+							   {0,0,1}, {1,1,1}, {1,0,0},
+							   {0,0,1}, {1,1,1}, {0,1,0}
+							   };
 		for (int cnt = 0; cnt < nb; cnt++){
-            int sub1, sub2, sub3;
-            point p;
-            p.x = i + TypeAtri[cnt*3][0]; p.y = j + TypeAtri[cnt*3][1]; p.z = k + TypeAtri[cnt*3][2];
-            sub1 = vh.GetIndex(p);
-            if (sub1 < 0){
-            	p.v = 1e-6;
-                vh.InsertVertex(p, vcount);
-                sub1 = vcount;
-                vcount++;
-                vertex.push_back(p);
-            }
+			int sub1, sub2, sub3;
+
+			point p;
+			p.x = i + TypeAtri[cnt*3][0];
+			p.y = j + TypeAtri[cnt*3][1];
+			p.z = k + TypeAtri[cnt*3][2];
+			sub1 = vh.GetIndex(p);
+			if (sub1 < 0){
+				p.v = 1e-6;
+				vh.InsertVertex(p, vcount);
+				sub1 = vcount;
+				vcount++;
+				vertex.push_back(p);
+			}
 			
-			p.x = i + TypeAtri[cnt*3+1][0]; p.y = j + TypeAtri[cnt*3+1][1];
+			p.x = i + TypeAtri[cnt*3+1][0];
+			p.y = j + TypeAtri[cnt*3+1][1];
 			p.z = k + TypeAtri[cnt*3+1][2];
 			sub2 = vh.GetIndex(p);
-            if (sub2 < 0){
-                p.v = 1e-6;
-                vh.InsertVertex(p, vcount);
-                sub2 = vcount;
-              	vcount++;
-                vertex.push_back(p);
-            }
+			if (sub2 < 0){
+				p.v = 1e-6;
+				vh.InsertVertex(p, vcount);
+				sub2 = vcount;
+				vcount++;
+				vertex.push_back(p);
+			}
 
-			p.x = i + TypeAtri[cnt*3+2][0]; p.y = j + TypeAtri[cnt*3+2][1];
+			p.x = i + TypeAtri[cnt*3+2][0];
+			p.y = j + TypeAtri[cnt*3+2][1];
 			p.z = k + TypeAtri[cnt*3+2][2];
 			sub3 = vh.GetIndex(p);
-            if (sub3 < 0){
-                p.v = 1e-6;
-                vh.InsertVertex(p, vcount);
-                sub3 = vcount;
-                vcount++;
-                vertex.push_back(p);
-            }
-            
-            tp new_triangle;
-            new_triangle.p1 = sub1; new_triangle.p2 = sub2; new_triangle.p3 = sub3;
+			if (sub3 < 0){
+				p.v = 1e-6;
+				vh.InsertVertex(p, vcount);
+				sub3 = vcount;
+				vcount++;
+				vertex.push_back(p);
+			}
+			
+			tp new_triangle;
+			new_triangle.p1 = sub1; new_triangle.p2 = sub2; new_triangle.p3 = sub3;
 			new_triangle.Reorder();
 			if (!th.HasTriangle(new_triangle)){
 				triangle.push_back(new_triangle);
 				th.InsertTriangle(new_triangle);
 			}
 
-            cp new_edge1;
-            new_edge1.p1 = sub1; new_edge1.p2 = sub2;
+			cp new_edge1;
+			new_edge1.p1 = sub1; new_edge1.p2 = sub2;
 			new_edge1.Reorder();
-            cp new_edge2;
-            new_edge2.p1 = sub1; new_edge2.p2 = sub3;
+			cp new_edge2;
+			new_edge2.p1 = sub1; new_edge2.p2 = sub3;
 			new_edge2.Reorder();
-            cp new_edge3;
-            new_edge3.p1 = sub2; new_edge3.p2 = sub3;
+			cp new_edge3;
+			new_edge3.p1 = sub2; new_edge3.p2 = sub3;
 			new_edge3.Reorder();
 
-            if (DEBUG){
-                printf("\t%d %d %d\n", sub1, sub2, sub3);
-            }
+			if (DEBUG){
+				printf("\t%d %d %d\n", sub1, sub2, sub3);
+			}
 
-            if (!eh.HasEdge(new_edge1)){
+			if (!eh.HasEdge(new_edge1)){
 				edge.push_back(new_edge1);
 				eh.InsertEdge(new_edge1);
 			}
@@ -365,9 +249,9 @@ int triangle_cube(int i, int j, int k, int AB){
 				edge.push_back(new_edge3);
 				eh.InsertEdge(new_edge3);
 			}
-        }
-    }
-    return 0;
+		}
+	}
+	return 0;
 }
 
 
@@ -399,12 +283,12 @@ int diffuse(point p){
 					vertex[idx].v += dif_p.v;
 					vertex[idx].in_bbox = false;
 				}
-    }
-    return sum;
+	}
+	return sum;
 }
 
 
-bool in_range(point p, vector<int> &bbox){
+bool in_range(point p, const vector<int> &bbox){
 	if (p.x >= bbox[0] && p.x <= bbox[1] &&
 		p.y >= bbox[2] && p.y <= bbox[3] &&
 		p.z >= bbox[4] && p.z <= bbox[5])
@@ -424,57 +308,228 @@ void update_bbox(vector<double> &vb, bool &first, point p){
 		vb[4] = p.z; vb[5] = p.z;
 	}else{
 		vb[0] = p.x < vb[0]?p.x:vb[0]; vb[1] = p.x > vb[1]?p.x:vb[1];
-                vb[2] = p.y < vb[2]?p.y:vb[2]; vb[3] = p.y > vb[3]?p.y:vb[3];
-                vb[4] = p.z < vb[4]?p.z:vb[4]; vb[5] = p.z > vb[5]?p.z:vb[5];
+				vb[2] = p.y < vb[2]?p.y:vb[2]; vb[3] = p.y > vb[3]?p.y:vb[3];
+				vb[4] = p.z < vb[4]?p.z:vb[4]; vb[5] = p.z > vb[5]?p.z:vb[5];
 	}
 }
 
 
-void ProcessGraph(string filename, vector<int> bbox, bool degreed, bool swp){
-	string vert_name = filename + "_vert.txt";
-	string edge_name = filename + "_edge.txt";
+void simplex_output(string fname){
+    string binname = fname + ".sc";
+    ofstream ofs(binname,ios::binary);
+    printf("writing vertex\n");
+
+    char* intwriter = new char[sizeof(int)];
+    int* intbuffer = (int*) intwriter;
+
+    char* vert = new char[sizeof(double) * 4];
+    double* vert_buffer = (double*) vert;
+
+    intbuffer[0] = vertex.size();
+    ofs.write(intwriter, sizeof(int));
+    for (int i = 0; i < vertex.size(); i++){
+        vert_buffer[0] = vertex[i].x; vert_buffer[1] = vertex[i].y;
+        vert_buffer[2] = vertex[i].z; vert_buffer[3] = vertex[i].v;
+        ofs.write(vert, sizeof(double) * 4);
+    }
+    
+    printf("writing edge\n");
+    char* edgechar = new char[sizeof(int) * 2];
+    int* edge_buffer = (int*) edgechar;
+    intbuffer[0] = edge.size();
+    ofs.write(intwriter, sizeof(int));
+    for (int i = 0; i < edge.size(); i++){
+        edge_buffer[0] = edge[i].p1; edge_buffer[1] = edge[i].p2;
+        ofs.write(edgechar, sizeof(int) * 2);
+    }
+    
+    printf("writing triangle\n");
+    char* trianglechar = new char[sizeof(int) * 3];
+    int* triangle_buffer = (int*) trianglechar;
+    intbuffer[0] = triangle.size();
+    ofs.write(intwriter, sizeof(int));
+    for (int i = 0; i < triangle.size(); i++){
+        triangle_buffer[0] = triangle[i].p1;
+        triangle_buffer[1] = triangle[i].p2;
+        triangle_buffer[2] = triangle[i].p3;
+        ofs.write(trianglechar, sizeof(int) * 3);
+    }
+    ofs.close();
+}
+
+
+double kernel_init(double sigma){
+	double sum = 0;
+	for (int i = -1; i <= 1; ++i)
+		for(int j = -1; j <= 1; ++j){
+			for(int k = -1; k <= 1; ++k){
+				sum += exp(- (i*i + j*j +k*k)/(2* sigma * sigma));
+				// cout << exp(- (i*i + j*j +k*k)/(2* sigma * sigma)) << " ";
+			}
+		// cout << "\n";
+	}
+	return 1.0/sum;
+}
+
+
+int Triangulate(){
+	int original_total = vertex.size();
 	
-	FILE* fp = fopen(vert_name.c_str(), "r");
-	if (fp==NULL){
+	double THD = 1e-6;
+	int skip_count = 0;
+	for(int v = 0; v < original_total; ++v){
+		int i, j, k, val;
+		
+		if (v%10000==0){
+			cout << '\r';
+			cout << v << '/' << original_total;
+			cout.flush();
+		}
+		
+		i = vertex[v].x; j = vertex[v].y; k = vertex[v].z; val = vertex[v].v;
+		if (val < THD ||vertex[v].in_bbox) {
+			// cout << "skipped something\n";
+			skip_count++;
+			continue;
+		}
+
+		if ((i+j+k)%2==1){
+			triangle_cube(i, j, k, 0);
+		}
+		else{
+			triangle_cube(i, j, k, 1);
+		}
+	}
+	
+	printf("\tSkipped %d points\n", skip_count);
+	return 0;
+}
+
+// For MinGW only
+/*
+std::string to_string(int i)
+{
+	std::stringstream ss;
+	ss << i;
+	return ss.str();
+}*/
+
+const int overlapdim = 3;
+struct parameter{
+	string out_prefix;
+	int overlap[overlapdim];
+};
+struct fileinfo{
+	string name;
+	// pixel coordinate
+	// 2 pairs of 3D coordinate defines the bounding box
+	// offset: xmin ymin zmin xmax ymax zmax
+	int offset[6];
+};
+
+ostream& operator<<(ostream& os, const parameter& p)  
+{
+	os << "[outputname] " << p.out_prefix << " || [overlap]";
+	for(int i = 0; i < overlapdim; i++)
+		 os << " " << p.overlap[i];
+	return os;
+}
+
+ostream& operator<<(ostream& os, const vector<int> &vec)  
+{
+	os << "[innerbox]";
+	for(int i = 0; i < vec.size(); i++)
+		 os << " " << vec[i];
+	return os;
+}
+
+
+int init_file(const string &inputname,
+			  parameter &para,
+			  vector<fileinfo> &blocks){
+	fstream ifs(inputname.c_str(), ios::in);
+	// get filename
+	ifs >> para.out_prefix;
+	
+	// get overlap
+	for(int i = 0; i < 3; i++){
+		ifs >> para.overlap[i];
+	}
+	
+	// get block info
+	blocks.clear();
+	while(!ifs.eof()){
+		fileinfo block_file;
+		ifs >> block_file.name;
+		if (ifs.eof()) break;
+
+		for(int i = 0; i < 6; i++)
+			ifs >> block_file.offset[i];
+		blocks.push_back(block_file);
+	}
+	ifs.close();
+	return 0;
+}
+
+int adjust_bbox(vector<fileinfo> &blocks, parameter para){
+	for(int i = 0; i < blocks.size(); ++i){
+		// make bbox in order: xmin, xmax, ymin, ymax, zmin, zmax
+		swap(blocks[i].offset[1], blocks[i].offset[3]);
+		swap(blocks[i].offset[2], blocks[i].offset[4]);
+		swap(blocks[i].offset[2], blocks[i].offset[3]);
+		for(int j = 0; j < overlapdim; ++j){
+			// shrink axis-min
+			blocks[i].offset[j*2] += para.overlap[j];
+			// shrink axis-max
+			blocks[i].offset[j*2+1] -= para.overlap[j];
+		}
+	}
+	return 0;
+}
+
+
+void ProcessGraph(fileinfo blk){
+	string vert_name = blk.name + "_vert.txt";
+	string edge_name = blk.name + "_edge.txt";
+	
+	fstream fp(vert_name.c_str(), ios::in);
+	if (fp.fail()){
 		cout << "Cannot open "<<vert_name << endl;
 		return;
 	}
-	double x, y, z, v;
+	
 	int nl;
 	graph_vert.clear();
 	bool first = 1;
 	vector<double> vertexbound(6, 0);
 	
-	if (!degreed){
-		while(fscanf(fp, "%lf%lf%lf%lf%d", &x, &y, &z, &v, &nl) != EOF){
-			point p;
-			p.x = x; p.y = y; p.z = z; p.v = v;
-			if (swp) swap(p.x, p.y);
-			graph_vert.push_back(p);  // + 1 or not
-			update_bbox(vertexbound, first, p);
-		}
-	}else{
-		int deg;
-		while(fscanf(fp, "%lf%lf%lf%lf%d%d", &x, &y, &z, &v, &nl, &deg) != EOF){
-			point p;
-			p.x = x; p.y = y; p.z = z; p.v = v;
-			if (swp) swap(p.x, p.y);
-			graph_vert.push_back(p);  // + 1 or not
-			update_bbox(vertexbound, first, p);
-		}
+	string input_str;
+	getline(fp, input_str);
+	while(!fp.eof()){
+		point p;
+		sscanf(input_str.c_str(), 
+			   "%d%d%d%d",
+			   &p.x, &p.y, &p.z, &p.v);
+		graph_vert.push_back(p);  // + 1 or not
+		update_bbox(vertexbound, first, p);
+		getline(fp, input_str);
 	}
-	fclose(fp);
+	fp.close();
 	printf("\tRead %d vertices\n \tbounded in:", graph_vert.size());
-	for(int i =0; i< 6; i++) printf("\t%.0f ", vertexbound[i]);
+	for(int i =0; i< 6; i++) printf(" %.0f ", vertexbound[i]);
 	printf("\n");
 	
 	
-	fp = fopen(edge_name.c_str(), "r");
+	fp.open(edge_name.c_str(), ios::in);
 	int e1, e2;
 	int counter = 0;
 	int c_interior = 0;
 	double persist;
-	while(fscanf(fp, "%d%d%d%lf", &e1, &e2, &nl,&persist) != EOF){
+
+	vector<int> bbox(blk.offset, blk.offset+ 6);
+	getline(fp, input_str);
+	while(!fp.eof()){
+		sscanf(input_str.c_str(), "%d%d%d%lf", &e1, &e2, &nl,&persist);
 		e1--;e2--;
 		if (in_range(graph_vert[e1], bbox) && in_range(graph_vert[e2], bbox)){
 			// only insert a point.
@@ -504,7 +559,7 @@ void ProcessGraph(string filename, vector<int> bbox, bool degreed, bool swp){
 			}
 
 			cp new_edge;
-            new_edge.p1 = idx1; new_edge.p2 = idx2;
+			new_edge.p1 = idx1; new_edge.p2 = idx2;
 			new_edge.Reorder();
 			if (!eh.HasEdge(new_edge)){
 				edge.push_back(new_edge);
@@ -522,233 +577,71 @@ void ProcessGraph(string filename, vector<int> bbox, bool degreed, bool swp){
 				counter ++;
 			}
 		}
+		getline(fp, input_str);
 	}
-	fclose(fp);
+	
 	printf("\tprocessed %d interior edges, %d diffused points\n", c_interior, counter, vh.size());
-	
-    printf("\tdone\n");
+	fp.close();
+	printf("\tdone\n");
 }
 
-
-void bin_output(){
-    ofstream ofs("vert.bin",ios::binary);
-    printf("\twriting %d vertex\n", vertex.size());
-    char* vert = new char[sizeof(double) * 4];
-    double* vert_buffer = (double*) vert;
-    for (int i = 0; i < vertex.size(); i++){
-    	vert_buffer[0] = vertex[i].x; vert_buffer[1] = vertex[i].y;
-    	vert_buffer[2] = vertex[i].z; vert_buffer[3] = vertex[i].v;
-		ofs.write(vert, sizeof(double) * 4);
-    }
-    ofs.close();
-
-	ofs.open("edge.bin", ios::binary);
-    printf("\twriting %d edge\n", edge.size());
-    char* edgechar = new char[sizeof(int) * 2];
-    int* edge_buffer = (int*) edgechar;
-    for (int i = 0; i < edge.size(); i++){
-    	edge_buffer[0] = edge[i].p1; edge_buffer[1] = edge[i].p2;
-        ofs.write(edgechar, sizeof(int) * 2);
-    }
-    ofs.close();
-
-    ofs.open("triangle.bin", ios::binary);
-    printf("\twriting %d triangle\n", triangle.size());
-    char* trianglechar = new char[sizeof(int) * 3];
-    int* triangle_buffer = (int*) trianglechar;
-    for (int i = 0; i < triangle.size(); i++){
-    	triangle_buffer[0] = triangle[i].p1;
-    	triangle_buffer[1] = triangle[i].p2;
-    	triangle_buffer[2] = triangle[i].p3;
-        ofs.write(trianglechar, sizeof(int) * 3);
-    }
-    ofs.close();
-}
-
-
-double kernel_init(double sigma){
-	double sum = 0;
-	for (int i = -1; i <= 1; ++i)
-		for(int j = -1; j <= 1; ++j){
-			for(int k = -1; k <= 1; ++k){
-				sum += exp(- (i*i + j*j +k*k)/(2* sigma * sigma));
-				// cout << exp(- (i*i + j*j +k*k)/(2* sigma * sigma)) << " ";
-			}
-		// cout << "\n";
-    }
-    return 1.0/sum;
-}
-
-
-int Triangulate(){
-	int original_total = vertex.size();
-	
-	double THD = 1e-6;
-	int skip_count = 0;
-    for(int v = 0; v < original_total; ++v){
-		int i, j, k, val;
-		
-		if (v%10000==0){
-			cout << '\r';
-			cout << v << '/' << original_total;
-			cout.flush();
-		}
-		
-		i = vertex[v].x; j = vertex[v].y; k = vertex[v].z; val = vertex[v].v;
-		if (val < THD ||vertex[v].in_bbox) {
-			// cout << "skipped something\n";
-			skip_count++;
-			continue;
-		}
-
-		if ((i+j+k)%2==1){
-			triangle_cube(i, j, k, 0);
-		}
-		else{
-			triangle_cube(i, j, k, 1);
-		}
-	}
-    
-    printf("\tSkipped %d points\n", skip_count);
-    return 0;
-}
-
-
-void init_trans(string trans_file){
-	FILE* fp = fopen(trans_file.c_str(), "r");
-	if (fp == NULL){
-		cout << trans_file << "cannot be opened." << endl;
-	}
-	int xlen;
-	int counter = 0;
-	int totnum = 0;
-	// fscanf(fp, "%d", &totnum);
-	while(fscanf(fp, "%d", &xlen)!=EOF){
-		trans_info.push_back(xlen);
-		counter++;
-		if (counter % 3 == 0 )
-			trans_info.push_back(0);
-	}
-	// should be dividable by 4
-	fclose(fp);
-}
-
-void init_settings(string setting_name, vector<double> &bboundary, 
-				vector<int> &filelist, bool &degreed){
-	FILE* fp = fopen(setting_name.c_str(), "r");
-	if (fp == NULL){
-		cout << "Failed to open setting file" + setting_name << endl;
-	}
-	// Reading boundary box.
-	for(int i = 0; i < 6; ++i){
-		double bound;
-		fscanf(fp, "%lf", &bound);
-		bboundary.push_back(bound);
-	}
-	
-	int tmp;
-	fscanf(fp, "%d", &tmp);
-	if (tmp == 1){
-		degreed = true;
-	}else degreed = false;
-	
-	// Reading file list
-	int filenum;
-	while(fscanf(fp, "%d", &filenum)!=EOF){
-		filelist.push_back(filenum);
-	}
-	fclose(fp);
-}
-
-// For MinGW only
-std::string to_string(int i)
-{
-    std::stringstream ss;
-    ss << i;
-    return ss.str();
-}
 
 int main(int argc, char* argv[])
 {
 	// input contains prefix S for dataset & number # for max number.
 	// format: s_#_vert.txt
 	// merge_graph_exe <prefix> <trans_matrix> <max_file_num>
-	string prefix;
+	string search_path;
 	string setting_name;
 	string trans;
 	bool degreed;
 	vector<double> bboundary;
 	vector<int> filelist;
-	if (argc == 4){
+
+	parameter para;
+	vector<fileinfo> blocks;
+	if (argc == 2){
+		/*
 		prefix = string(argv[1]);
 		trans = string(argv[2]);
 		setting_name = string(argv[3]);
 		nb = 12;
+		*/
+		string configname(argv[1]);
+		cout << "Reading parameters from: " << configname << endl;
+		init_file(configname, para, blocks);
+		cout << para << endl;
+		cout << "block count: " << blocks.size() << endl;
+
+		search_path = getpath(argv[1]);
+		cout << "work folder: " << search_path << endl;
 	}
 	else {
-		cout << "usage: merge_graph <prefix_file> <trans> <setting_file>";
+		cout << "usage: merge_graph <config_file>";
 		return 0;
 	}
-	/*******************************
-	Setting file format
-	<bounding box> 6 integers
-	<# of files>
-	[file number]
-	********************************/
-	
-	trans_info.clear();
-	// Read settings.ini
-	// need boundary, start_file end_file
-	init_trans(trans);
-	init_settings(setting_name, bboundary, filelist, degreed);
-	
+
+	// adjust bounding box for each block according to overlap
+	adjust_bbox(blocks, para);
+
 	vertex.clear(); edge.clear(); triangle.clear();
 	norm_const = kernel_init(0.5);
 	cout << "Normalize factor: " << norm_const << endl;
-
-	vector<int> bbox;
-	for(int i = 0; i < filelist.size(); i++){
-		string filename = prefix + to_string(filelist[i]);
+	
+	for(int i = 0; i < blocks.size(); i++){
+		string filename = search_path + blocks[i].name;
+		blocks[i].name = filename;
 		printf("Processing Graph %s...\n", filename.c_str());
+		cout << "\t" << vector<int>(blocks[i].offset, blocks[i].offset+ 6) << endl;
 		
-		bbox.clear();
-		int lz;
-		int j = filelist[i];
-		lz = trans_info[j*4 + 3];
-
-		// setting up bounding box for the dataset.
-		/*
-		int xmin = trans_info[j*4] + 5;		bbox.push_back(xmin);
-		int xmax = trans_info[j*4] + 517 - 5;		bbox.push_back(xmax);
-		int ymin = trans_info[j*4 + 1] + 5;	bbox.push_back(ymin);
-		int ymax = trans_info[j*4 + 1] + 517 - 5;	bbox.push_back(ymax);
-		int zmin = trans_info[j*4 + 2] + 0;		bbox.push_back(zmin);
-		int zmax = trans_info[j*4 + 2] + 500;		bbox.push_back(zmax);
-		*/
-		int xmin = trans_info[j*4] + bboundary[0];		bbox.push_back(xmin);
-		int xmax = trans_info[j*4] + bboundary[1];		bbox.push_back(xmax);
-		int ymin = trans_info[j*4 + 1] + bboundary[2];		bbox.push_back(ymin);
-		int ymax = trans_info[j*4 + 1] + bboundary[3];		bbox.push_back(ymax);
-		int zmin = trans_info[j*4 + 2] + bboundary[4];		bbox.push_back(zmin);
-		int zmax = trans_info[j*4 + 2] + bboundary[5];		bbox.push_back(zmax);
-		
-
-		cout << "\tinterior box:";
-		for(auto &x : bbox){
-			cout << x << " ";
-		}
-		cout << endl;
-		
-		ProcessGraph(filename, bbox, degreed, 1);
-		// 1 means swap x y coordinate
+		ProcessGraph(blocks[i]);
 	}
 	
 	Triangulate();
 	
-	bin_output();
+	simplex_output(search_path+para.out_prefix);
 
-    printf("Done\n");
-    return 0;
+	printf("Done\n");
+	
+	return 0;
 }
-
-

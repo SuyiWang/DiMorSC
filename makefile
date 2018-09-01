@@ -8,6 +8,7 @@ CXXFLAGS = -std=c++11 -w
 # includes
 COREINCLUDES = -I./extern/phat/include
 TRI_INCLUDES = -I./extern/boost
+TREE_INCLUDES = -I./core/
 
 # target
 EXEC = DiMorSC Triangulate graph2tree
@@ -26,7 +27,7 @@ Triangulate: pointcloud/$(TRI).cpp
 	$(CXX) $(CXXFLAGS) $(TRI_INCLUDES) -o bin/$(TRI) pointcloud/$(TRI).cpp
 
 graph2tree: tree_simplification/$(TREE).cpp
-	$(CXX) $(CXXFLAGS) -o bin/$(TREE) tree_simplification/$(TREE).cpp tree_simplification/graph.cpp tree_simplification/readini.cpp
+	$(CXX) $(CXXFLAGS) $(TREE_INCLUDES) -o bin/$(TREE) tree_simplification/$(TREE).cpp tree_simplification/graph.cpp core/readini.cpp
 #clean:
 	
 	
