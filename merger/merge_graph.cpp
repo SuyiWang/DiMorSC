@@ -387,7 +387,7 @@ int Triangulate(){
 		}
 		
 		i = vertex[v].x; j = vertex[v].y; k = vertex[v].z; val = vertex[v].v;
-		if (val < THD ||vertex[v].in_bbox) {
+		if (vertex[v].in_bbox) {
 			// cout << "skipped something\n";
 			skip_count++;
 			continue;
@@ -508,8 +508,10 @@ void ProcessGraph(fileinfo blk){
 	while(!fp.eof()){
 		point p;
 		sscanf(input_str.c_str(), 
-			   "%d%d%d%d",
+			   "%d%d%d%lf",
 			   &p.x, &p.y, &p.z, &p.v);
+		//cout << input_str << endl;
+		//cout << vector<int>({p.x, p.y, p.z, p.v}) << endl;
 		graph_vert.push_back(p);  // + 1 or not
 		update_bbox(vertexbound, first, p);
 		getline(fp, input_str);
