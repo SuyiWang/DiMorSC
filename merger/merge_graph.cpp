@@ -139,9 +139,7 @@ int triangle_cube(int i, int j, int k, int AB){
 			new_edge3.p1 = sub2; new_edge3.p2 = sub3;
 			new_edge3.Reorder();
 
-			if (DEBUG){
-				printf("\t%d %d %d\n", sub1, sub2, sub3);
-			}
+			//if (DEBUG){printf("\t%d %d %d\n", sub1, sub2, sub3);}
 
 			if (!eh.HasEdge(new_edge1)){
 				edge.push_back(new_edge1);
@@ -233,9 +231,7 @@ int triangle_cube(int i, int j, int k, int AB){
 			new_edge3.p1 = sub2; new_edge3.p2 = sub3;
 			new_edge3.Reorder();
 
-			if (DEBUG){
-				printf("\t%d %d %d\n", sub1, sub2, sub3);
-			}
+			//if (DEBUG){printf("\t%d %d %d\n", sub1, sub2, sub3);}
 
 			if (!eh.HasEdge(new_edge1)){
 				edge.push_back(new_edge1);
@@ -462,6 +458,7 @@ int init_file(const string &inputname,
 		fileinfo block_file;
 		ifs >> block_file.name;
 		if (ifs.eof()) break;
+		// should detect data error?
 
 		for(int i = 0; i < 6; i++)
 			ifs >> block_file.offset[i];
