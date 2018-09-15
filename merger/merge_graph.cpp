@@ -470,6 +470,7 @@ int init_file(const string &inputname,
 
 int adjust_bbox(vector<fileinfo> &blocks, parameter para){
 	for(int i = 0; i < blocks.size(); ++i){
+		// original order: xmin,ymin,zmin,xmax,ymax,zmax
 		// make bbox in order: xmin, xmax, ymin, ymax, zmin, zmax
 		swap(blocks[i].offset[1], blocks[i].offset[3]);
 		swap(blocks[i].offset[2], blocks[i].offset[4]);

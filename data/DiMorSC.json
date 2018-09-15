@@ -1,0 +1,23 @@
+{
+"type":"DiMorSC",
+"data":[
+	{
+        "action":"preprocess",
+        "sigma": 2.0,
+        "threshold":5.0
+    },
+    {
+        "action":"triangulation"
+    },
+    {
+        "action":"DiMorSC",
+        "threshold":5.0
+    },
+    {
+        "action":"to_tree",
+        "root":"0 0 0",
+        "saddle":0,
+        "component":10
+    }
+]
+}

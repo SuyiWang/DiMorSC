@@ -1,0 +1,29 @@
+{
+"type":"split",
+"data":[
+    {
+        "action":"split",
+        "size":"* 100 100"
+    },
+    {
+        "action":"trace",
+        "children":[
+            {
+                "action":"preprocess",
+                "sigma": 2.0,
+                "threshold":5.0
+            },
+            {
+                "action":"triangulation"
+            },
+            {
+                "action":"DiMorSC",
+                "threshold":5.0
+            }
+        ]
+    },
+    {
+        "action":"merge"
+    }
+]
+}
