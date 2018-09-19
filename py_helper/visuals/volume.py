@@ -44,7 +44,6 @@ def multi_draw(blocklist, prt=None):
     
     # draw for each item in blocklist a visual
     volume_block_visual = []
-    print(blocklist)
     for vobj in blocklist:
         vol_visual = draw(vobj._visdata['volume'],
                           prt=prt,
