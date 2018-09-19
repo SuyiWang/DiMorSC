@@ -13,7 +13,7 @@ from vispy.visuals.transforms import STTransform, MatrixTransform
 # In general, we need to keep both, 
 # because the copied data will be changed to a form for rendering
 
-def draw(data, prt=None, translate=(0,0,0)):
+def draw(data, prt=None, translate=[0,0,0]):
     # sometimes the volume coordinates are inconsistent with the actual one
     # see binWriter.py for currently found correct one.
     # if not, manually adjust with the following traslate groups.

@@ -19,7 +19,7 @@ class MyCanvas():
     Add all visual object to this container
     '''
 
-    def setup_canvas(self, canvas, targetview):
+    def _setup_canvas(self, canvas, targetview):
         # Create three cameras (Fly, Turntable and Arcball)
         fov = 60.
         cam1 = Fly(parent=targetview.scene, fov=fov, name='Fly')
@@ -126,7 +126,7 @@ class MyCanvas():
         # Set up a viewbox to display the image with interactive pan/zoom
         self.view = self.canvas.central_widget.add_view()
         
-        self.setup_canvas(self.canvas, self.view)
+        self._setup_canvas(self.canvas, self.view)
         return
 
 
