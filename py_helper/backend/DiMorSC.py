@@ -71,7 +71,9 @@ def pipeline(data_ptr, parameters, workpath="output/"):
                         )
             
             # collect
-            rtn.append(('dens', file))
+            log = para.get("log", False)
+            if log:
+                rtn.append(('dens', file))
             now_ptr = Data_Pointer(file, objtype='cloud')
             del data
 
@@ -84,7 +86,9 @@ def pipeline(data_ptr, parameters, workpath="output/"):
 
             # collect
             now_ptr = Data_Pointer(file, objtype='sc')
-            rtn.append(('sc', file))
+            log = para.get("log", False)
+            if log:
+                rtn.append(('sc', file))
 
         if para['action'] == 'DiMorSC':
             # prepare
@@ -103,7 +107,10 @@ def pipeline(data_ptr, parameters, workpath="output/"):
             ]
             ininame = ''.join([file, '.ini'])
             fileWriter.write_string_list(graphcfg, ininame)
-            rtn.append(('ini', ininame))
+            
+            log = para.get("log", False)
+            if log:
+                rtn.append(('ini', ininame))
             now_ptr = Data_Pointer(ininame, objtype='graph')
 
         if para['action'] == 'to_tree':
@@ -115,8 +122,10 @@ def pipeline(data_ptr, parameters, workpath="output/"):
             files = _graph2tree(now_ptr.path)
 
             # collect
-            for file in files:
-                rtn.append(('graph', file))
+            log = para.get("log", False)
+            if log:
+                for file in files:
+                    rtn.append(('graph', file))
 
     print('    files to be collected:')
     filelist = '\n'.join([('\t'+x[0]+': '+x[1]) for x in rtn])
@@ -139,7 +148,7 @@ def merge(data_ptr, workpath='output/'):
     # call merger
     subprocess.call(["./bin/merge_graph", filename],
                     stdout=stdoutREDIRECT)
-    return [('sc', "merged"),]
+    return [('sc', workpath+'merged.sc'),]
 
 
 def _rmvExt(filename):

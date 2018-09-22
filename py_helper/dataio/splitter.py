@@ -63,13 +63,114 @@ def write_3D_block(data, foldername, offset):
         layernum += 1
 
 def split_picwise_block(ptr, size, overlap, workpath='output/'):
-    # ptr._visdata['shape'] may not exist, so we directly get one.
-    file_struct = cal_split(ptr._visdata['shape'], size, overlap)
-    # for each image
-    # get folder name
-    # write file
-    return None
+    # generate folder name
+    data_name = ptr._get_name()
+    data_folder = workpath+data_name+'_split/'
+    os.makedirs(data_folder, exist_ok=True)
 
+    # get file number from path
+    files = imageLoader.GetFilelist(ptr.path)
+    volume_shape = [len(files), ]
+
+    # z loop
+    # for each image
+    zaxis = 0
+    for file in files:
+        # Assuming no missing files
+
+        # filetype tells which module to use for loading data
+        img = imageLoader.loadImage(ptr.path+'/'+file)
+
+        if len(volume_shape) != 3:
+            # shape[0] should be y axis, shape[1] should be x.
+            volume_shape.append(img.shape[0])
+            volume_shape.append(img.shape[1])
+            file_struct = cal_split(volume_shape, size, overlap)
+
+        # file_struct must exist now.
+        # find upper/lower bound for z axis.
+        bounds = _find_bounds(file_struct, zaxis)
+
+        # get folder name
+        # loop over all structures, a folder is created for each struct
+        # filestruct in this loop is guaranteed to intersect with give pic
+        for foldernum in range(bounds[0], bounds[1]):
+            struct = file_struct[foldernum]
+            offset = struct['pos']
+            # write one file
+            _write_2D_img(img[offset[1]:offset[4], offset[2]:offset[5]], 
+                          data_folder + struct['file'],
+                          zaxis)
+
+        zaxis += 1
+
+    # finishing touch, write json describing the structure of blocks
+    jsondata = {"type":"block", "data":file_struct, "overlap":overlap}
+    jsonName = data_folder + data_name +'.json'
+    json.write(jsondata, jsonName)
+    return jsonName
+
+def _find_bounds(file_struct, z):
+    # it's binary search
+    # struct:file_struct is offset zl = struct[0] zu = struct[3]
+    
+    # lower bound L is the last x: z_upper(x) <= z
+    # upper bound U is the first x; z_lower(x) >= z
+    z_upper = lambda x: file_struct[x]['pos'][3]
+    z_upper.search_range = (0, len(file_struct))
+
+    z_lower = lambda x: file_struct[x]['pos'][0]
+    z_lower.search_range = (0, len(file_struct))
+    
+    L = _lower_bound(z_upper, z)
+    U = _upper_bound(z_lower, z)
+
+    # solution always exist
+    return (L, U+1)
+
+def _upper_bound(array_func, target):
+    '''
+    suppose f(x) monotonic inc
+    returns the last index x where f(x) <= target
+    '''
+    # array_obj should have attribute search_range()
+    # array_obj(x)
+
+    # [left, right)
+    f = array_func
+    left, right = f.search_range
+
+    while left<right:
+        mid = (left + right) // 2
+        if f(mid) > target:
+            right = mid
+        else:
+            left = mid + 1
+    return right - 1
+
+def _lower_bound(array_func, target):
+    '''
+    suppose f(x) monotonic inc
+    returns the first index x where f(x) >= target
+    '''
+
+    f = array_func
+    left, right = f.search_range
+
+    while left < right:
+        mid = (left + right) // 2
+        if f(mid) >= target:
+            right = mid
+        else:
+            left = mid + 1
+    return right
+
+
+def _write_2D_img(imgpiece, folder, filenum):
+    os.makedirs(folder, exist_ok=True)
+    if folder[-1] != '/':
+        folder = folder + '/'
+    imageWriter.write(imgpiece, folder + str(filenum), 'png')
 
 def cal_split(datashape, targetsize, overlap):
     '''

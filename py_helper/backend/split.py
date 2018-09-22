@@ -54,7 +54,9 @@ def pipeline(data_ptr, parameters, workpath='output/'):
             # create a new Data_Pointer
             now_ptr = Data_Pointer(file,
                                   objtype='json')
-            rtn.append(('json', file))
+            log = para.get('log', False)
+            if log:
+                rtn.append(('json', file))
 
         if para['action'] == 'trace':
             print('[Backend]\tTrace target:', now_ptr.path)
@@ -64,6 +66,8 @@ def pipeline(data_ptr, parameters, workpath='output/'):
             # a folder with dataname will be created in workpath
             # to contain all outputs
             OFFSET_UPDATE = False
+            log = para.get('log', False)
+
             dataname = now_ptr._get_name()
             for item in data_ptr_list:
                 if not OFFSET_UPDATE and len(item.offset) != 6:
@@ -71,6 +75,9 @@ def pipeline(data_ptr, parameters, workpath='output/'):
                 tracefile = DiMorSC.pipeline(item, 
                                         para['children'], 
                                         workpath+dataname)
+                if log:
+                    rtn = rtn + tracefile
+                    tracefile = None
 
             # rewrite if json file does not contain full block info
             # only update for json
@@ -80,7 +87,6 @@ def pipeline(data_ptr, parameters, workpath='output/'):
 
             # if file is collected here, ignore it in the future
             if len(data_ptr_list) == 1:
-                rtn = rtn + tracefile
                 now_ptr = Data_Pointer(tracefile, objtype='oldgraph')
                 tracefile = None
 
@@ -97,22 +103,30 @@ def pipeline(data_ptr, parameters, workpath='output/'):
                 dataname = now_ptr._get_name()
                 tracefile = DiMorSC.merge(now_ptr, workpath+dataname)
                 now_ptr = Data_Pointer(tracefile, objtype='oldgraph')
-                rtn.append(('oldgraph', tracefile))
+                
+                log = para.get('log', False)
+                if log:
+                    rtn += tracefile
             else:
                 # do not change now_ptrect
                 print('[Backend]\tCollecting single graph for target:',
                       now_ptr.path)
                 if 'tracefile' in locals() and tracefile is not None: 
                     now_ptr = Data_Pointer(tracefile, objtype='oldgraph')
-                    rtn.append(('oldgraph', tracefile))
+                    log = para.get('log', False)
+                    if log:
+                        rtn.append(('oldgraph', tracefile))
 
         if para['action'] == 'to_tree':
             print('[DiMorSC]\tgraph2tree')
             # prepare input config
 
             files = _graph2tree(now_ptr.path)
-            for file in files:
-                rtn.append(('graph', file))
+
+            log = para.get('log', False)
+            if log:
+                for file in files:
+                    rtn.append(('graph', file))
 
     # return all files
     return rtn

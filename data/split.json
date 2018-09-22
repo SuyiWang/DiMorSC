@@ -3,7 +3,8 @@
 "data":[
     {
         "action":"split",
-        "size":"* 100 100"
+        "size":"* 100 100",
+        "log": 1
     },
     {
         "action":"trace",
@@ -18,12 +19,15 @@
             },
             {
                 "action":"DiMorSC",
-                "threshold":5.0
+                "threshold":5.0,
+                "log": 1
             }
-        ]
+        ],
+        "log": 1
     },
     {
-        "action":"merge"
+        "action":"merge",
+        "log": 1
     }
 ]
 }

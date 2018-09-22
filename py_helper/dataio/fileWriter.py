@@ -29,7 +29,7 @@ def write_bin(data, id, thd = -1, trans = [0, 0, 0]):
 	# write to file
 	double_array = array('d')
 	counter = 0
-	for (x,y,z),value in numpy.ndenumerate(data):
+	for (z,y,x),value in numpy.ndenumerate(data):
 		if value > thd:
 			counter+=1
 			double_array.append(float(x) + trans[2])

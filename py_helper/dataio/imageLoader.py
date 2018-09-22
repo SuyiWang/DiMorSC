@@ -194,7 +194,7 @@ def majority_filetype(files):
 get file list in numeric order
 (string) path, (string) suffix
 '''
-def GetFilelist(path, suffix):
+def GetFilelist(path, suffix=None):
     print("    [ImageLoader]\tReading files in", path)
     selected = []
     files = os.listdir(path)

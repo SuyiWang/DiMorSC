@@ -20,6 +20,8 @@ if __name__  == "__main__":
 		# load file list
 		files = config.getLines(sys.argv[1])
 		for file in files:
+			if len(file) < 1:
+				continue
 			obj = Data_Pointer(file)
 			vc.insert(obj)
 		app.run()
