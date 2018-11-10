@@ -30,7 +30,7 @@ def draw(data, prt=None, translate=[0,0,0]):
     volume1 = scene.visuals.Volume(data, parent=prt,
                                    threshold=0.001,
                                    emulate_texture=emulate_texture,
-                                   method='additive')
+                                   method='mip')
     
     # translate coordinate is provided in ZYX
     # but screen coordinate is in XYZ, so we reverse it

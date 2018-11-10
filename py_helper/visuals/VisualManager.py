@@ -140,7 +140,13 @@ class MyCanvas():
         ptr = load(obj.path)
         visual_item = _create_visual(ptr)
         if visual_item is not None:
+            self.set_range(ptr)
             self._show(visual_item)
+
+    def set_range(self, ptr):
+        # update x/y/zlim using ptr
+        # camera position will be determined by x/y/zlim
+        pass
 
     def _show(self, vis):
         if not isinstance(vis, list):
@@ -215,6 +221,7 @@ def _getdata(path_id, filetype):
     # use different function according to filetype
     if filetype == 'tif':   
         visdata, downsample, orishape = imageLoader.loadVisVolume(path_id, filetype)
+        #visdata = imageLoader.loadVolume(path_id, filetype)
         data = {'volume':visdata, 'type':'volume'}
         ptr = Data_Pointer(path_id, visdata=data, objtype='volume')
         return ptr
