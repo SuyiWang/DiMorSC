@@ -25,6 +25,7 @@ class Fly(scene.cameras.FlyCamera):
     def __init__(self, **kwargs):
         super(Fly, self).__init__(**kwargs)
         self._timer.interval = 1.0/100
+        # self.set_range(x=[0,100], y=[0, 100], z=[0, 50])
 
     def _set_range(self, init):
         """ Reset the view.
@@ -65,7 +66,8 @@ class Fly(scene.cameras.FlyCamera):
         # Set initial position to a corner of the scene
         margin = np.mean([rx, ry, rz]) * 0.1
         self._center = x1 - margin, y1 - margin, z1 + margin
-        self._center = (-100, -100, -50)
+        #self._center = (-100, -100, -50)
+        self.lookAt((0, y1 + ry/2, x1 + rx/2))
 
         # Determine initial view direction based on flip axis
         yaw = 45 * self._flip_factors[0]
