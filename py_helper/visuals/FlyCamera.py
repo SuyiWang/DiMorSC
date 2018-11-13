@@ -4,8 +4,6 @@ import numpy as np
 import math
 from vispy.util import keys
 
-from visuals import marker
-
 
 # override several functions
 class Fly(scene.cameras.FlyCamera):
@@ -67,6 +65,7 @@ class Fly(scene.cameras.FlyCamera):
         # Set initial position to a corner of the scene
         margin = np.mean([rx, ry, rz]) * 0.1
         self._center = x1 - margin, y1 - margin, z1 + margin
+        self._center = (-100, -100, -50)
 
         # Determine initial view direction based on flip axis
         yaw = 45 * self._flip_factors[0]
@@ -183,9 +182,6 @@ class Fly(scene.cameras.FlyCamera):
 
         if event.type == 'mouse_press':
             event.handled = True
-            global eventcounter, lookAtpoint
-            self.lookAt(lookAtpoint[eventcounter])
-            eventcounter = (eventcounter + 1) % 3
 
         if event.type == 'mouse_release':
             # Reset
@@ -290,119 +286,35 @@ class Fly(scene.cameras.FlyCamera):
     // --------------------
     memcpy(matrix, resultMatrix, 16*sizeof(float));
     '''
+    # one more example
+    # https://github.com/vispy/vispy/issues/240
     def lookAt(self, viscenter):
-        if hasattr(self, 'cmarker') and self.cmarker.parent is not None:
-            self.cmarker.parent = None
-        
-        self.cmarker = marker.new(self.parent, np.array([viscenter, [0,0,0], [0,0,-10], [20,0,0], [0,40,0]]))
-        
+        '''
+        This version creates rotation quaterion that rotates front direction
+        from global coordinates to eye coordinates.
+        '''
         # compute actual rotate 
         front = np.array(viscenter) - np.array(self._center)
         front = normalize(front)
+        
+        front_in_cam = self.rotation.rotate_point(front)
+        front_in_cam = normalize(front_in_cam)
+        # in radius
+        rollangle = math.acos(np.dot(front_in_cam, [0,0,-1]))
+        rollaxis = np.cross(front_in_cam, [0,0,-1])
+        rollaxis = normalize(rollaxis)
 
-        # right
-        right = np.cross(front, [0,1,0])
-        right = normalize(right)
-        up = np.cross(right, front)
-
-        #
-        tr = self.transform
-        # mapping for rotation, mainly camera facing
-        tr.set_mapping([[0,0,0], front, right, up],
-                       [[0,0,0], [0,0,-1], [1,0,0], [0,1,0]]
-                       )
-        print(tr.matrix[0:3, 0:3])
-        z,y,x = mat2euler(tr.matrix[0:3, 0:3])
-        print(z, y, x)
-
-        q1 = Quaternion.create_from_axis_angle(z*math.pi/180, 1, 0, 0)
-        q2 = Quaternion.create_from_axis_angle(y*math.pi/180, 0, 1, 0)
-        q3 = Quaternion.create_from_axis_angle(x*math.pi/180, 0, 0, 1)
-        self.rotation = (q1 * q2 * q3).normalize()
+        quat = Quaternion.create_from_axis_angle(rollangle, 
+                                                 rollaxis[0],
+                                                 rollaxis[1],
+                                                 rollaxis[2])
+        # update rotation
+        self.rotation = (quat * self.rotation).normalize()
         self.view_changed()
 
-    def setUp(self, up=[0,0,1]):
-        # this is usually automatically adjusted
-        pass
 
 def normalize(v):
     norm = np.linalg.norm(v)
     if norm == 0: 
        return v
     return v / norm
-
-global eventcounter, lookAtpoint
-eventcounter = 0
-lookAtpoint = [(0,0,0), (0,50,50), (50,50,0)]
-
-def mat2euler(M, cy_thresh=None):
-    ''' Discover Euler angle vector from 3x3 matrix
-    Source: https://afni.nimh.nih.gov/pub/dist/src/pkundu/meica.libs/nibabel/eulerangles.py
-    Uses the conventions above.
-
-    Parameters
-    ----------
-    M : array-like, shape (3,3)
-    cy_thresh : None or scalar, optional
-       threshold below which to give up on straightforward arctan for
-       estimating x rotation.  If None (default), estimate from
-       precision of input.
-
-    Returns
-    -------
-    z : scalar
-    y : scalar
-    x : scalar
-       Rotations in radians around z, y, x axes, respectively
-
-    Notes
-    -----
-    If there was no numerical error, the routine could be derived using
-    Sympy expression for z then y then x rotation matrix, which is::
-
-      [                       cos(y)*cos(z),                       -cos(y)*sin(z),         sin(y)],
-      [cos(x)*sin(z) + cos(z)*sin(x)*sin(y), cos(x)*cos(z) - sin(x)*sin(y)*sin(z), -cos(y)*sin(x)],
-      [sin(x)*sin(z) - cos(x)*cos(z)*sin(y), cos(z)*sin(x) + cos(x)*sin(y)*sin(z),  cos(x)*cos(y)]
-
-    with the obvious derivations for z, y, and x
-
-       z = atan2(-r12, r11)
-       y = asin(r13)
-       x = atan2(-r23, r33)
-
-    Problems arise when cos(y) is close to zero, because both of::
-
-       z = atan2(cos(y)*sin(z), cos(y)*cos(z))
-       x = atan2(cos(y)*sin(x), cos(x)*cos(y))
-
-    will be close to atan2(0, 0), and highly unstable.
-
-    The ``cy`` fix for numerical instability below is from: *Graphics
-    Gems IV*, Paul Heckbert (editor), Academic Press, 1994, ISBN:
-    0123361559.  Specifically it comes from EulerAngles.c by Ken
-    Shoemake, and deals with the case where cos(y) is close to zero:
-
-    See: http://www.graphicsgems.org/
-
-    The code appears to be licensed (from the website) as "can be used
-    without restrictions".
-    '''
-    M = np.asarray(M)
-    if cy_thresh is None:
-        try:
-            cy_thresh = np.finfo(M.dtype).eps * 4
-        except ValueError:
-            cy_thresh = _FLOAT_EPS_4
-    r11, r12, r13, r21, r22, r23, r31, r32, r33 = M.flat
-    # cy: sqrt((cos(y)*cos(z))**2 + (cos(x)*cos(y))**2)
-    cy = math.sqrt(r33*r33 + r23*r23)
-    if cy > cy_thresh: # cos(y) not close to zero, standard form
-        z = math.atan2(-r12,  r11) # atan2(cos(y)*sin(z), cos(y)*cos(z))
-        y = math.atan2(r13,  cy) # atan2(sin(y), cy)
-        x = math.atan2(-r23, r33) # atan2(cos(y)*sin(x), cos(x)*cos(y))
-    else: # cos(y) (close to) zero, so x -> 0.0 (see above)
-        # so r21 -> sin(z), r22 -> cos(z) and
-        z = math.atan2(r21,  r22)
-        y = math.atan2(r13,  cy) # atan2(sin(y), cy)
-        x = 0.0
-    return z, y, x
